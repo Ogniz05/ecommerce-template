@@ -1,0 +1,191 @@
+================================================================
+  SETUP PAGAMENTI & TRACKING AUTOMATICO
+  File: C:\laragon\www\ecommerce-template\.env
+================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. STRIPE (pagamenti con carta di credito)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 1 — Crea account
+  → https://stripe.com/it
+  → Registrati e completa la verifica email
+
+PASSO 2 — Modalità TEST (per sviluppo)
+  → Dashboard Stripe → in alto a sinistra: attiva "Modalità test"
+  → Vai su: https://dashboard.stripe.com/test/apikeys
+  → Copia:
+      Chiave pubblica  → inizia con pk_test_...
+      Chiave segreta   → inizia con sk_test_...
+
+PASSO 3 — Inserisci nel file .env
+  STRIPE_PUBLIC_KEY=<inserisci_qui_chiave_pubblica_stripe>
+  STRIPE_SECRET_KEY=<inserisci_qui_chiave_segreta_stripe>
+  VITE_STRIPE_PUBLIC_KEY=<inserisci_qui_chiave_pubblica_stripe>
+    (VITE_ serve al frontend, metti la stessa chiave pubblica)
+
+PASSO 4 — Webhook Stripe (aggiornamento automatico ordine)
+  → Dashboard Stripe → Sviluppatori → Webhook
+  → Clic "Aggiungi endpoint"
+  → URL: https://tuodominio.com/api/payments/webhook/stripe
+  → Seleziona evento: payment_intent.succeeded
+  → Copia il "Signing secret" (inizia con whsec_...)
+  → Inserisci nel .env:
+      STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
+
+PASSO 5 — Carte di test Stripe
+  Carta che va a buon fine:  4242 4242 4242 4242
+  Carta rifiutata:           4000 0000 0000 0002
+  Scadenza: qualsiasi data futura  |  CVV: qualsiasi 3 cifre
+
+PASSO 6 — Modalità LIVE (produzione reale)
+  → Disattiva "Modalità test" nella dashboard
+  → Ripeti il passo 2 e prendi le chiavi pk_live_ e sk_live_
+  → Sostituiscile nel .env
+  → Il webhook va riconfigurato con le chiavi live
+
+----------------------------------------------------------------
+  Dopo aver modificato .env → riavvia il backend
+  e ribuildda il frontend: cd frontend && npm run build
+----------------------------------------------------------------
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2. PAYPAL (opzionale, alternativa a Stripe)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 1 — Crea app sviluppatore
+  → https://developer.paypal.com/dashboard
+  → My Apps & Credentials → Clic "Create App"
+  → Scegli tipo: Merchant
+  → Copia Client ID e Secret (sezione "Sandbox" per test)
+
+PASSO 2 — Inserisci nel .env
+  PAYPAL_CLIENT_ID=Axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  PAYPAL_SECRET=Exxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  PAYPAL_MODE=sandbox      ← usa "live" per produzione reale
+
+PASSO 3 — Test PayPal
+  → Vai su https://developer.paypal.com/dashboard/accounts
+  → Usa gli account sandbox preconfigurati per simulare pagamenti
+  → Buyer test email e password li trovi sotto "Sandbox Accounts"
+
+PASSO 4 — Produzione
+  → Torna su developer.paypal.com → sezione "Live"
+  → Crea/usa app live → copia nuove credenziali
+  → Cambia PAYPAL_MODE=live nel .env
+
+----------------------------------------------------------------
+  Nota: puoi usare solo Stripe (più semplice e moderno).
+  PayPal è opzionale — se non metti le chiavi, il pulsante
+  PayPal nel checkout non funzionerà ma Stripe sì.
+----------------------------------------------------------------
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. AFTERSHIP (tracking automatico spedizioni)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AfterShip monitora automaticamente DHL, UPS, GLS, BRT, SDA,
+Poste Italiane, FedEx, TNT e altri 900+ corrieri.
+Quando lo stato cambia (spedito → in transito → consegnato)
+aggiorna l'ordine nel database e manda email al cliente.
+
+PASSO 1 — Crea account
+  → https://www.aftership.com
+  → Registrati (piano Free: 50 spedizioni/mese gratis)
+
+PASSO 2 — Ottieni API Key
+  → https://accounts.aftership.com/api-keys
+  → Clic "Generate new API key"
+  → Copia la chiave (inizia con as_...)
+  → Inserisci nel .env:
+      AFTERSHIP_API_KEY=as_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+PASSO 3 — Configura Webhook
+  → Dashboard AfterShip → Settings → Notifications → Webhook
+  → Clic "Add webhook"
+  → URL: https://tuodominio.com/api/webhooks/aftership
+  → Seleziona evento: Tracking Update
+  → Clic "Save" → copia il "Secret"
+  → Inserisci nel .env:
+      AFTERSHIP_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+PASSO 4 — Come si usa nell'admin
+  → Admin → Ordini → apri un ordine pagato
+  → Sezione "Tracking Spedizione" (in alto a destra)
+  → Seleziona corriere dal menu
+  → Incolla il numero tracking
+  → Clic "Registra & Spedisci"
+  → AfterShip inizia a monitorare automaticamente
+
+PASSO 5 — Test in locale (opzionale)
+  AfterShip non può raggiungere localhost con i webhook.
+  Per testare in locale usa ngrok:
+    1. Scarica ngrok: https://ngrok.com/download
+    2. Esegui: ngrok http 5000
+    3. Copia l'URL pubblico (es. https://abc123.ngrok.io)
+    4. Mettilo come webhook su AfterShip:
+       https://abc123.ngrok.io/api/webhooks/aftership
+    5. Ogni volta che riavvii ngrok l'URL cambia
+
+PASSO 6 — Produzione
+  → Usa il dominio reale del sito come URL webhook
+  → Non serve ngrok in produzione
+  → Il HTTPS è obbligatorio per AfterShip (serve certificato SSL)
+
+----------------------------------------------------------------
+  Corrieri supportati nel form admin (slug AfterShip):
+    DHL             → dhl
+    UPS             → ups
+    FedEx           → fedex
+    TNT             → tnt
+    GLS Italia      → gls-italy
+    BRT/Bartolini   → brt
+    SDA             → sda
+    Poste Italiane  → poste-italiane
+    DPD             → dpd
+    Nexive          → nexive
+
+  Se il corriere non è in lista, seleziona "Auto-detect":
+  AfterShip lo rileva dal formato del tracking number.
+----------------------------------------------------------------
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RIEPILOGO VARIABILI .env DA CONFIGURARE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Stripe
+STRIPE_PUBLIC_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+VITE_STRIPE_PUBLIC_KEY=pk_test_...   ← stessa chiave pubblica
+
+# PayPal (opzionale)
+PAYPAL_CLIENT_ID=A...
+PAYPAL_SECRET=E...
+PAYPAL_MODE=sandbox
+
+# AfterShip
+AFTERSHIP_API_KEY=as_...
+AFTERSHIP_WEBHOOK_SECRET=...
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DOPO OGNI MODIFICA AL .env
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Riavvia il backend:
+       Chiudi la finestra del server node e rieseguilo
+       oppure di a Claude: "riavvia il server"
+
+  2. Rebuild il frontend (se hai cambiato VITE_* ):
+       cd C:\laragon\www\ecommerce-template\frontend
+       npm run build
+
+  3. VITE_STRIPE_PUBLIC_KEY richiede rebuild obbligatorio
+     perché Vite incorpora le variabili VITE_ al build time.
+
+================================================================

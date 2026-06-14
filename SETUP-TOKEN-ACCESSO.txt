@@ -1,0 +1,124 @@
+================================================================
+  TOKEN DI ACCESSO AL SITO — GUIDA COMPLETA
+================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  COME FUNZIONA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Chiunque apra il sito (qualsiasi pagina, qualsiasi asset)
+vede solo una schermata di blocco nera.
+Senza il token corretto: impossibile accedere a niente.
+
+Il token viene salvato come cookie sicuro nel browser
+e dura 7 giorni. Dopo 7 giorni si deve reinserire.
+
+File che gestiscono il gate:
+  backend/middleware/accessGate.js   ← logica blocco
+  backend/routes/gate.js             ← verifica token + cookie
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TOKEN ATTUALE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  VISA_Customer
+
+Configurato in:  C:\laragon\www\ecommerce-template\.env
+Riga:            ACCESS_TOKEN=VISA_Customer
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CAMBIARE IL TOKEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Apri: C:\laragon\www\ecommerce-template\.env
+2. Trova la riga:   ACCESS_TOKEN=VISA_Customer
+3. Cambia il valore dopo il = con il nuovo token
+   Esempio:         ACCESS_TOKEN=MioNuovoToken2026
+4. Salva il file
+5. Riavvia il server backend
+
+Tutti i cookie esistenti diventano immediatamente invalidi.
+Chi era loggato dovrà reinserire il nuovo token.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DISABILITARE IL GATE (per sviluppo locale)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Per lavorare liberamente in locale senza dover inserire
+il token ogni volta:
+
+1. Apri .env
+2. Cambia:  ACCESS_TOKEN=VISA_Customer
+   In:      ACCESS_TOKEN=
+3. Riavvia backend
+
+Gate disabilitato. Rimetti il valore prima di andare online.
+
+NOTA: La Vite dev server su localhost:3000 non ha mai
+il gate — è solo su localhost:5000 (Express).
+Per testare il gate in locale vai su http://localhost:5000
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  METTERE ONLINE (deploy su VPS/server)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Il sito gira tutto da Express su porta 5000.
+Il frontend React è già buildato in frontend/dist/ — non
+serve un server Vite separato in produzione.
+
+PASSI:
+
+1. Sul server, imposta nel .env:
+     NODE_ENV=production
+     ACCESS_TOKEN=VISA_Customer   (o token scelto)
+     CLIENT_URL=https://tuodominio.com
+
+2. Rebuilda il frontend se hai cambiato VITE_* vars:
+     cd frontend && npm run build
+
+3. Avvia il backend:
+     cd backend && npm start
+     (oppure con PM2: pm2 start server.js --name ecommerce)
+
+4. Punta nginx/apache al backend su porta 5000:
+     proxy_pass http://localhost:5000;
+
+5. HTTPS obbligatorio (Let's Encrypt gratuito):
+   - In produzione il cookie visa_token ha il flag Secure
+   - Senza HTTPS il browser rifiuta il cookie → gate sempre
+   - Usa Certbot: https://certbot.eff.org
+
+NGINX config minima (esempio):
+  server {
+      listen 443 ssl;
+      server_name tuodominio.com;
+      ssl_certificate /etc/letsencrypt/live/tuodominio.com/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/tuodominio.com/privkey.pem;
+      location / {
+          proxy_pass http://localhost:5000;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+  }
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SICUREZZA — DETTAGLI TECNICI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Cookie httpOnly: JavaScript non può leggere il token
+- Cookie Secure (produzione): solo su HTTPS
+- Cookie SameSite=Strict: protetto da attacchi CSRF
+- Confronto timing-safe: impossibile indovinare il token
+  provando varianti carattere per carattere
+- Rate limiting: max 100 richieste ogni 15 minuti per IP
+  (blocca tentativi brute-force automatici)
+- Tutti gli asset bloccati: JS, CSS, immagini, uploads
+- Le API /api/* passano senza gate (hanno JWT proprio)
+
+================================================================

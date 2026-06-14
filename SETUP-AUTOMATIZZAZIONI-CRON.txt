@@ -1,0 +1,158 @@
+================================================================
+  AUTOMATIZZAZIONI ECOMMERCE - CRON JOBS
+  File: backend/jobs/scheduler.js (NUOVO)
+================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PANORAMICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+node-cron è già installato (v3.0.3) ma non usato.
+Queste 4 automazioni girano in background ogni volta che il server
+è acceso — nessuna configurazione esterna richiesta.
+
+AUTOMAZIONE 1 — Auto-cancel ordini non pagati
+AUTOMAZIONE 2 — Alert email quando stock è basso
+AUTOMAZIONE 3 — Richiesta recensione 3 giorni dopo consegna
+AUTOMAZIONE 4 — Report settimanale vendite ogni lunedì
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PREREQUISITO — EMAIL SMTP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le automazioni mandano email. Se non hai ancora configurato
+lo SMTP nel .env, fallo prima:
+
+  SMTP_HOST=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_SECURE=false
+  SMTP_USER=tua@gmail.com
+  SMTP_PASS=app_password_gmail
+  EMAIL_FROM_NAME=Nome Negozio
+  EMAIL_FROM_ADDRESS=noreply@tuonegozio.com
+  ADMIN_EMAIL=admin@tuonegozio.com   ← riceve alert stock + report
+
+Per Gmail: vai su myaccount.google.com → Sicurezza →
+  "Password per le app" e genera una password dedicata.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AUTOMAZIONE 1 — AUTO-CANCEL ORDINI NON PAGATI (ogni ora)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COSA FA:
+  Controlla ogni ora se ci sono ordini in stato "pending" con
+  pagamento non ricevuto da più di 24 ore.
+  Li annulla automaticamente e libera lo stock riservato.
+  Manda una email al cliente per avvisarlo.
+
+QUANDO GIRA: ogni ora (es. 10:00, 11:00, 12:00...)
+
+EFFETTI:
+  - Ordine: status "pending" → "cancelled"
+  - Inventory: quantità riservata viene liberata
+  - Cliente: riceve email "Ordine annullato"
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AUTOMAZIONE 2 — ALERT STOCK BASSO (ogni giorno alle 8:00)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COSA FA:
+  Ogni mattina alle 8 controlla tutti i prodotti attivi.
+  Se uno ha stock totale ≤ 5 pezzi, lo segnala all'admin.
+  Se tutto è ok, non manda nulla.
+
+SOGLIA: 5 pezzi (modificabile nel codice, riga con "HAVING ≤ 5")
+
+DESTINATARIO: ADMIN_EMAIL nel .env
+
+EMAIL CONTIENE:
+  - Nome prodotto
+  - SKU
+  - Stock attuale
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AUTOMAZIONE 3 — RICHIESTA RECENSIONE (ogni giorno alle 10:00)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COSA FA:
+  Ogni mattina alle 10 cerca ordini consegnati da almeno 3 giorni
+  a cui non è stata ancora mandata la richiesta recensione.
+  Manda una email al cliente con i link diretti ai prodotti
+  acquistati per lasciare una recensione.
+
+INVIO: una sola volta per ordine (tracciato nel DB)
+
+RICHIEDE: colonna "review_request_sent_at" nella tabella orders
+  → Viene aggiunta automaticamente al primo avvio del server
+
+EMAIL CONTIENE:
+  - Lista prodotti acquistati
+  - Link diretto alla pagina di ogni prodotto
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AUTOMAZIONE 4 — REPORT SETTIMANALE (ogni lunedì alle 9:00)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COSA FA:
+  Ogni lunedì mattina alle 9 manda all'admin un riepilogo
+  delle vendite della settimana precedente (lun-dom).
+
+DESTINATARIO: ADMIN_EMAIL nel .env
+
+EMAIL CONTIENE:
+  - Fatturato totale settimana
+  - Numero ordini
+  - Valore medio ordine
+  - Top 5 prodotti per revenue
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FILE MODIFICATI DALL'IMPLEMENTAZIONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NUOVO:
+  backend/jobs/scheduler.js        ← tutta la logica cron
+
+MODIFICATI:
+  backend/config/email.js          ← +4 template email
+  backend/server.js                ← avvio scheduler dopo DB connect
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  COME VERIFICARE CHE FUNZIONI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Dopo implementazione:
+
+1. Riavvia il server
+   → Cerca nel log: "✅ Cron jobs avviati"
+
+2. Verifica colonna DB aggiunta:
+   → In MySQL Workbench: DESCRIBE orders;
+   → Deve apparire: review_request_sent_at | datetime | YES | NULL
+
+3. Test manuale auto-cancel:
+   → Esegui in MySQL:
+      INSERT INTO orders (user_id, order_number, status, payment_status,
+        subtotal, total_amount, created_at)
+      VALUES (1, 'TEST-CANCEL', 'pending', 'pending', 50, 50,
+        NOW() - INTERVAL 25 HOUR);
+   → Aspetta il prossimo scoccare dell'ora (es. 14:00:00)
+   → L'ordine deve diventare "cancelled"
+
+4. Test manuale alert stock:
+   → In MySQL:
+      UPDATE inventory SET quantity = 3 WHERE product_id = 1;
+   → Aspetta le 8:00 del giorno dopo
+   → O chiedi a Claude di triggerare manualmente
+
+5. Email arrivata? Controlla SMTP_USER (o log errori se SMTP non
+   configurato — il server va avanti comunque, non crasha)
+
+================================================================
