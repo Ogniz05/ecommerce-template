@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { sequelize } = require('./config/database');
+const passport = require('./config/passport');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,6 +49,9 @@ app.use('/api/webhooks',
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Passport (no session — JWT-only)
+app.use(passport.initialize());
+
 // Gate verify (body already parsed above — must come before gate middleware)
 app.use('/api/gate', require('./routes/gate'));
 
@@ -67,6 +71,10 @@ app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api', require('./routes/returns'));
+app.use('/api', require('./routes/stockAlerts'));
+app.use('/api', require('./routes/giftCards'));
+app.use('/api/loyalty', require('./routes/loyalty'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -77,6 +85,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'Route non trovata' });
 });
+
+// SEO — sitemap.xml + robots.txt (public, before access gate)
+app.use('/', require('./routes/seo'));
 
 // ── ACCESS GATE ─────────────────────────────────────────────────────────────
 // Blocks all non-API routes (static files, SPA) without a valid cookie.

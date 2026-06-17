@@ -1,11 +1,9 @@
--- ============================================
+﻿-- ============================================
 -- ECOMMERCE TEMPLATE - DATABASE SCHEMA
 -- MySQL 8.0 Compatible
 -- Run: mysql -u root -p < database/schema.sql
 -- ============================================
 
-CREATE DATABASE IF NOT EXISTS ecommerce_template CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE ecommerce_template;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -370,3 +368,4 @@ CREATE TABLE IF NOT EXISTS gift_cards (
 -- added via migration (see backend/scripts/migrate-loyalty-giftcards.js)
 
 SET FOREIGN_KEY_CHECKS = 1;
+

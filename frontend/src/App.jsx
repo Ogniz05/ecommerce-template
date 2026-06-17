@@ -24,6 +24,7 @@ const Register = lazy(() => import('./pages/Auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/Auth/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/Auth/VerifyEmail'));
+const SocialCallback = lazy(() => import('./pages/Auth/SocialCallback'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
 const OrderDetail = lazy(() => import('./pages/OrderDetail'));
 const About = lazy(() => import('./pages/Info/About'));
@@ -32,6 +33,7 @@ const FAQ = lazy(() => import('./pages/Info/FAQ'));
 const Privacy = lazy(() => import('./pages/Info/Privacy'));
 const Terms = lazy(() => import('./pages/Info/Terms'));
 const Shipping = lazy(() => import('./pages/Info/Shipping'));
+const GiftCards = lazy(() => import('./pages/GiftCards'));
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -119,7 +121,7 @@ export default function App() {
             <Route path="/products/:slug" element={<MainLayout><ProductDetail /></MainLayout>} />
             <Route path="/carrello" element={<MainLayout><Cart /></MainLayout>} />
             <Route path="/cart" element={<MainLayout><Cart /></MainLayout>} />
-            <Route path="/checkout" element={<ProtectedRoute><MainLayout><Checkout /></MainLayout></ProtectedRoute>} />
+            <Route path="/checkout" element={<MainLayout><Checkout /></MainLayout>} />
             <Route path="/ordine-confermato/:id" element={<ProtectedRoute><MainLayout><OrderSuccess /></MainLayout></ProtectedRoute>} />
             <Route path="/order-success/:id" element={<ProtectedRoute><MainLayout><OrderSuccess /></MainLayout></ProtectedRoute>} />
 
@@ -137,6 +139,7 @@ export default function App() {
             <Route path="/auth/forgot-password" element={<PublicOnly><MainLayout><ForgotPassword /></MainLayout></PublicOnly>} />
             <Route path="/auth/reset-password" element={<MainLayout><ResetPassword /></MainLayout>} />
             <Route path="/auth/verify-email" element={<MainLayout><VerifyEmail /></MainLayout>} />
+            <Route path="/auth/social-callback" element={<SocialCallback />} />
 
             {/* Info Pages */}
             <Route path="/chi-siamo" element={<MainLayout><About /></MainLayout>} />
@@ -149,6 +152,8 @@ export default function App() {
             <Route path="/terms" element={<MainLayout><Terms /></MainLayout>} />
             <Route path="/spedizioni" element={<MainLayout><Shipping /></MainLayout>} />
             <Route path="/shipping" element={<MainLayout><Shipping /></MainLayout>} />
+            <Route path="/gift-card" element={<MainLayout><GiftCards /></MainLayout>} />
+            <Route path="/buoni-regalo" element={<MainLayout><GiftCards /></MainLayout>} />
 
             {/* 404 */}
             <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />

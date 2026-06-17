@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { FiFilter, FiX, FiGrid, FiList, FiChevronDown, FiSearch } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import api from '../utils/api';
 import { staggerContainer, fadeInUp } from '../utils/animations';
 
@@ -134,6 +135,10 @@ export default function Catalog() {
 
   return (
     <div className="page-wrapper">
+      <SEO
+        title={search ? `Ricerca: ${search}` : 'Catalogo'}
+        description="Sfoglia il nostro catalogo completo. Filtra per categoria, prezzo e altro."
+      />
       {/* Page banner */}
       <div className="relative bg-dark overflow-hidden -mt-20 pt-20">
         <div className="absolute inset-0 opacity-25" style={{

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   FiUser, FiPackage, FiHeart, FiMapPin, FiShield, FiEdit2, FiSave,
   FiX, FiChevronRight, FiCamera, FiMail, FiLock, FiEye, FiEyeOff,
-  FiBell, FiLogOut, FiCheck, FiPlus, FiTrash2, FiAlertCircle
+  FiBell, FiLogOut, FiCheck, FiPlus, FiTrash2, FiAlertCircle, FiAward, FiArrowUp, FiArrowDown
 } from 'react-icons/fi';
 import { useAuthStore, useWishlistStore } from '../store/useStore';
 import { formatPrice } from '../utils/formatters';
@@ -22,6 +22,7 @@ const ORDER_STATUS = {
   shipped:    { label: 'Spedito',      bg: 'bg-purple-500/15 text-purple-400 border-purple-500/20' },
   delivered:  { label: 'Consegnato',   bg: 'bg-green-500/15 text-green-400 border-green-500/20' },
   cancelled:  { label: 'Annullato',    bg: 'bg-red-500/15 text-red-400 border-red-500/20' },
+  refunded:   { label: 'Rimborsato',  bg: 'bg-gray-500/15 text-gray-400 border-gray-500/20' },
 };
 
 // ─── Avatar uploader ──────────────────────────────────────────────────────────
@@ -601,9 +602,104 @@ function NotificationsTab() {
 }
 
 // ─── TABS config ──────────────────────────────────────────────────────────────
+// ─── LOYALTY TAB ────────────────────────────────────────────────────────────
+function LoyaltyTab() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/loyalty')
+      .then(setData)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="h-64 rounded-2xl bg-white/5 animate-pulse" />;
+  if (!data) return <p className="text-white/50 text-center py-12">Impossibile caricare i punti.</p>;
+
+  const { points, value, config, transactions } = data;
+  const nextTierGap = config.min_redeem - (points % config.min_redeem || 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Balance card */}
+      <motion.div
+        className="rounded-3xl p-7 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #D8125B, #7c3aed)' }}
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/10" />
+        <div className="absolute -bottom-12 -left-6 w-32 h-32 rounded-full bg-white/5" />
+        <div className="relative">
+          <div className="flex items-center gap-2 text-white/70 text-sm mb-2">
+            <FiAward size={16} /> I tuoi punti fedeltà
+          </div>
+          <motion.p
+            className="font-display font-bold text-5xl text-white"
+            key={points}
+            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          >
+            {points}
+          </motion.p>
+          <p className="text-white/80 text-sm mt-1">Valore: {formatPrice(value)}</p>
+          {points >= config.min_redeem ? (
+            <p className="text-white/90 text-xs mt-3 bg-white/15 rounded-lg px-3 py-2 inline-block">
+              ✓ Puoi riscattare al checkout
+            </p>
+          ) : (
+            <p className="text-white/70 text-xs mt-3">
+              Ti servono ancora {nextTierGap} punti per il primo riscatto ({config.min_redeem} punti = {formatPrice(config.min_redeem / config.redeem_rate)})
+            </p>
+          )}
+        </div>
+      </motion.div>
+
+      {/* How it works */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+          <p className="text-white font-heading font-semibold text-sm mb-1">Guadagna</p>
+          <p className="text-white/50 text-xs">{config.points_per_euro} punto ogni €1 speso</p>
+        </div>
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+          <p className="text-white font-heading font-semibold text-sm mb-1">Riscatta</p>
+          <p className="text-white/50 text-xs">{config.redeem_rate} punti = {formatPrice(1)} di sconto</p>
+        </div>
+      </div>
+
+      {/* History */}
+      <div>
+        <h3 className="text-white font-heading font-semibold mb-3">Storico movimenti</h3>
+        {transactions.length === 0 ? (
+          <p className="text-white/40 text-sm text-center py-8">Nessun movimento ancora.</p>
+        ) : (
+          <div className="space-y-2">
+            {transactions.map(tx => (
+              <div key={tx.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${tx.points >= 0 ? 'bg-green-500/15 text-green-400' : 'bg-brand/15 text-brand'}`}>
+                    {tx.points >= 0 ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />}
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">{tx.description}</p>
+                    <p className="text-white/40 text-xs">{new Date(tx.created_at).toLocaleDateString('it-IT')}</p>
+                  </div>
+                </div>
+                <span className={`font-heading font-bold text-sm ${tx.points >= 0 ? 'text-green-400' : 'text-brand'}`}>
+                  {tx.points >= 0 ? '+' : ''}{tx.points}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'info',          icon: FiUser,    label: 'Profilo' },
   { id: 'orders',        icon: FiPackage, label: 'Ordini' },
+  { id: 'loyalty',       icon: FiAward,   label: 'Punti' },
   { id: 'wishlist',      icon: FiHeart,   label: 'Wishlist' },
   { id: 'addresses',     icon: FiMapPin,  label: 'Indirizzi' },
   { id: 'security',      icon: FiShield,  label: 'Sicurezza' },
@@ -615,6 +711,7 @@ function FiB(props) { return <FiBell {...props} />; }
 
 const SUBPATH_TO_TAB = {
   ordini: 'orders', orders: 'orders',
+  punti: 'loyalty', loyalty: 'loyalty',
   preferiti: 'wishlist', wishlist: 'wishlist',
   indirizzi: 'addresses', addresses: 'addresses',
   sicurezza: 'security', security: 'security',
@@ -622,7 +719,7 @@ const SUBPATH_TO_TAB = {
 };
 
 const CONTENT = {
-  info: InfoTab, orders: OrdersTab, wishlist: WishlistTab,
+  info: InfoTab, orders: OrdersTab, loyalty: LoyaltyTab, wishlist: WishlistTab,
   addresses: AddressesTab, security: SecurityTab, notifications: NotificationsTab,
 };
 

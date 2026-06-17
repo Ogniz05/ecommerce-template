@@ -1,11 +1,13 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiGrid, FiPackage, FiShoppingCart, FiUsers, FiTag, FiBarChart2,
   FiSettings, FiAlertTriangle, FiTrendingUp, FiDollarSign, FiEye,
   FiEdit2, FiTrash2, FiPlus, FiSearch, FiFilter, FiDownload,
   FiCheck, FiX, FiRefreshCw, FiImage, FiMenu, FiChevronRight,
-  FiLogOut, FiArrowLeft, FiMapPin, FiCreditCard, FiTruck, FiUser, FiClock
+  FiLogOut, FiArrowLeft, FiMapPin, FiCreditCard, FiTruck, FiUser, FiClock, FiRotateCcw,
+  FiGift, FiMail, FiSend, FiActivity
 } from 'react-icons/fi';
 import { useAuthStore } from '../../store/useStore';
 import { formatPrice } from '../../utils/formatters';
@@ -21,6 +23,10 @@ const NAV_ITEMS = [
   { id: 'users', icon: FiUsers, label: 'Utenti' },
   { id: 'coupons', icon: FiTag, label: 'Coupon' },
   { id: 'inventory', icon: FiBarChart2, label: 'Inventario' },
+  { id: 'returns', icon: FiRotateCcw, label: 'Resi' },
+  { id: 'giftcards', icon: FiGift, label: 'Gift Card' },
+  { id: 'marketing', icon: FiMail, label: 'Marketing' },
+  { id: 'analytics', icon: FiActivity, label: 'Analytics' },
   { id: 'settings', icon: FiSettings, label: 'Impostazioni' },
 ];
 
@@ -104,32 +110,39 @@ function DashboardTab({ onTabChange }) {
         <StatCard title="Prodotti" value={stats.products || 0} icon={FiPackage} color="green-500" />
       </div>
 
-      {/* Charts placeholder + Recent Orders */}
+      {/* Charts + Recent Orders */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Sales Chart placeholder */}
+        {/* Sales Area Chart */}
         <div className="lg:col-span-2 card p-5">
           <h3 className="font-heading font-bold text-dark mb-4">Andamento Vendite</h3>
           {(() => {
-            const chart = (data?.salesChart || []).map(b => ({ label: b.month, value: parseFloat(b.revenue) || 0 }));
-            const max = Math.max(1, ...chart.map(b => b.value));
-            if (!chart.length) return <div className="h-48 flex items-center justify-center text-text-secondary text-sm">Nessun dato di vendita</div>;
+            const chart = (data?.salesChart || []).map(b => ({
+              month: b.month?.slice(5) || b.month,
+              revenue: parseFloat(b.revenue) || 0,
+              orders: parseInt(b.orders) || 0,
+            }));
+            if (!chart.length) return (
+              <div className="h-48 flex items-center justify-center text-text-secondary text-sm">Nessun dato di vendita</div>
+            );
             return (
-              <div className="h-48 flex items-end gap-2">
-                {chart.map((bar, i) => (
-                  <motion.div
-                    key={i}
-                    className="flex-1 bg-brand/20 rounded-t-lg relative group cursor-pointer hover:bg-brand/40 transition-colors"
-                    style={{ height: `${(bar.value / max) * 100}%` }}
-                    initial={{ height: 0 }}
-                    animate={{ height: `${(bar.value / max) * 100}%` }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-dark text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                      {formatPrice(bar.value)}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={chart} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#D8125B" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#D8125B" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.1)', fontSize: 12 }}
+                    formatter={(v) => [`€${parseFloat(v).toFixed(2)}`, 'Fatturato']}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#D8125B" strokeWidth={2} fill="url(#colorRevenue)" dot={false} activeDot={{ r: 4, fill: '#D8125B' }} />
+                </AreaChart>
+              </ResponsiveContainer>
             );
           })()}
         </div>
@@ -1430,7 +1443,597 @@ function SettingsTab() {
   );
 }
 
+// ─── RETURNS TAB ───────────────────────────────────────────────────────────
+const RETURN_REASONS_MAP = {
+  damaged: 'Prodotto danneggiato',
+  wrong_item: 'Articolo errato',
+  not_as_described: 'Non come descritto',
+  changed_mind: 'Cambiato idea',
+  other: 'Altro',
+};
+const RETURN_STATUS_COLORS = {
+  pending:  'bg-yellow-100 text-yellow-700',
+  approved: 'bg-blue-100 text-blue-700',
+  rejected: 'bg-red-100 text-red-700',
+  refunded: 'bg-green-100 text-green-700',
+};
+const RETURN_STATUS_LABELS = {
+  pending: 'In Attesa', approved: 'Approvato', rejected: 'Rifiutato', refunded: 'Rimborsato'
+};
+
+function ReturnsTab() {
+  const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [approveModal, setApproveModal] = useState(false);
+  const [rejectModal, setRejectModal] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    const params = new URLSearchParams({ page, limit: 20 });
+    if (statusFilter) params.set('status', statusFilter);
+    if (search) params.set('search', search);
+    api.get(`/admin/returns?${params}`)
+      .then(d => { setReturns(d.returns || []); setTotal(d.pagination?.total || 0); })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [page, statusFilter]);
+
+  const openDetail = (id) => {
+    setDetailLoading(true);
+    setSelected(null);
+    api.get(`/admin/returns/${id}`)
+      .then(d => { setSelected(d); setRefundAmount(String(parseFloat(d.return_request.refund_amount || 0).toFixed(2))); })
+      .finally(() => setDetailLoading(false));
+  };
+
+  const approve = async () => {
+    setProcessing(true);
+    try {
+      await api.patch(`/admin/returns/${selected.return_request.id}/approve`, { refund_amount: parseFloat(refundAmount) });
+      toast.success('Rimborso elaborato');
+      setApproveModal(false);
+      setSelected(null);
+      load();
+    } catch (err) {
+      toast.error(err.message || 'Errore elaborazione rimborso');
+    } finally { setProcessing(false); }
+  };
+
+  const reject = async () => {
+    setProcessing(true);
+    try {
+      await api.patch(`/admin/returns/${selected.return_request.id}/reject`, { admin_notes: adminNotes });
+      toast.success('Richiesta rifiutata');
+      setRejectModal(false);
+      setSelected(null);
+      load();
+    } catch (err) {
+      toast.error(err.message || 'Errore');
+    } finally { setProcessing(false); }
+  };
+
+  if (selected || detailLoading) {
+    const rr = selected?.return_request;
+    const items = selected?.items || [];
+    return (
+      <div className="space-y-6 max-w-3xl">
+        <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-text-secondary hover:text-dark text-sm transition-colors">
+          <FiArrowLeft size={14} /> Torna ai resi
+        </button>
+        {detailLoading ? (
+          <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="h-24 skeleton rounded-xl" />)}</div>
+        ) : rr ? (
+          <>
+            <div className="card p-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="font-heading font-bold text-xl text-dark">Reso #{rr.id}</h2>
+                  <p className="text-text-secondary text-sm">Ordine <span className="font-mono font-semibold">#{rr.order_number}</span></p>
+                </div>
+                <span className={`text-xs px-3 py-1.5 rounded-full font-heading font-semibold ${RETURN_STATUS_COLORS[rr.status]}`}>
+                  {RETURN_STATUS_LABELS[rr.status]}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><p className="text-text-secondary text-xs mb-1">Cliente</p><p className="font-medium">{rr.first_name} {rr.last_name}</p><p className="text-text-secondary">{rr.email}</p></div>
+                <div><p className="text-text-secondary text-xs mb-1">Motivo</p><p className="font-medium">{RETURN_REASONS_MAP[rr.reason] || rr.reason}</p></div>
+                <div><p className="text-text-secondary text-xs mb-1">Importo ordine</p><p className="font-semibold text-dark">{formatPrice(parseFloat(rr.total_amount))}</p></div>
+                <div><p className="text-text-secondary text-xs mb-1">Richiesto il</p><p>{new Date(rr.created_at).toLocaleDateString('it-IT')}</p></div>
+              </div>
+              {rr.description && (
+                <div className="bg-gray-50 rounded-xl p-4 text-sm text-text-secondary">
+                  <p className="font-heading font-semibold text-dark text-xs mb-1">Descrizione cliente</p>
+                  {rr.description}
+                </div>
+              )}
+              {rr.admin_notes && (
+                <div className="bg-red-50 rounded-xl p-4 text-sm text-red-700">
+                  <p className="font-heading font-semibold text-xs mb-1">Note admin</p>
+                  {rr.admin_notes}
+                </div>
+              )}
+              {rr.stripe_refund_id && (
+                <p className="text-xs text-text-secondary font-mono">Stripe refund ID: {rr.stripe_refund_id}</p>
+              )}
+            </div>
+            {items.length > 0 && (
+              <div className="card overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+                  <FiPackage size={14} className="text-brand" />
+                  <h3 className="font-heading font-bold text-dark text-sm">Articoli ordine ({items.length})</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {items.map(it => (
+                    <div key={it.id} className="flex items-center gap-3 p-4 text-sm">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                        <img src={`https://picsum.photos/seed/${it.product_id}/80`} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-dark truncate">{it.product_name}</p>
+                        {it.variant_name && <p className="text-text-secondary text-xs">{it.variant_name}</p>}
+                      </div>
+                      <p className="text-text-secondary text-xs">×{it.quantity}</p>
+                      <p className="font-semibold text-dark">{formatPrice(parseFloat(it.total_price))}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {rr.status === 'pending' && (
+              <div className="flex gap-3">
+                <button onClick={() => setApproveModal(true)} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-heading font-semibold text-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+                  <FiCheck size={14} /> Approva Rimborso
+                </button>
+                <button onClick={() => setRejectModal(true)} className="flex-1 py-3 rounded-xl bg-red-50 text-red-600 border border-red-200 font-heading font-semibold text-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                  <FiX size={14} /> Rifiuta
+                </button>
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {/* Approve modal */}
+        <AnimatePresence>
+          {approveModal && (
+            <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="absolute inset-0 bg-black/50" onClick={() => setApproveModal(false)} />
+              <motion.div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}>
+                <h3 className="font-heading font-bold text-dark text-lg mb-4">Conferma Rimborso</h3>
+                <div className="mb-4">
+                  <label className="label">Importo rimborso (€)</label>
+                  <input type="number" step="0.01" min="0.01" value={refundAmount} onChange={e => setRefundAmount(e.target.value)} className="input" />
+                  <p className="text-text-secondary text-xs mt-1">Il rimborso verrà elaborato via Stripe se disponibile.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setApproveModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-heading font-semibold text-text-secondary">Annulla</button>
+                  <button onClick={approve} disabled={processing} className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-heading font-semibold disabled:opacity-60 flex items-center justify-center gap-2">
+                    {processing ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Conferma'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Reject modal */}
+        <AnimatePresence>
+          {rejectModal && (
+            <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="absolute inset-0 bg-black/50" onClick={() => setRejectModal(false)} />
+              <motion.div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}>
+                <h3 className="font-heading font-bold text-dark text-lg mb-4">Rifiuta Richiesta</h3>
+                <div className="mb-4">
+                  <label className="label">Motivazione (opzionale)</label>
+                  <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} rows={3} className="input resize-none" placeholder="Spiega il motivo del rifiuto…" />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setRejectModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-heading font-semibold text-text-secondary">Annulla</button>
+                  <button onClick={reject} disabled={processing} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-heading font-semibold disabled:opacity-60 flex items-center justify-center gap-2">
+                    {processing ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Rifiuta'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="font-heading font-bold text-xl text-dark flex-1">Resi <span className="text-text-secondary font-normal">({total})</span></h2>
+        <div className="flex items-center gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && load()}
+            placeholder="Cerca ordine / cliente…"
+            className="input text-sm w-52"
+          />
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="input text-sm w-36">
+            <option value="">Tutti</option>
+            {Object.entries(RETURN_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+      </div>
+      {loading ? (
+        <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}</div>
+      ) : !returns.length ? (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4"><FiRotateCcw size={24} className="text-gray-400" /></div>
+          <p className="text-text-secondary">Nessuna richiesta di reso</p>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                {['Ordine', 'Cliente', 'Motivo', 'Importo', 'Data', 'Stato', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 font-heading font-semibold text-text-secondary text-xs">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {returns.map(r => (
+                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-dark font-medium">#{r.order_number}</td>
+                  <td className="px-4 py-3 text-text-secondary">{r.first_name} {r.last_name}</td>
+                  <td className="px-4 py-3 text-text-secondary">{RETURN_REASONS_MAP[r.reason] || r.reason}</td>
+                  <td className="px-4 py-3 font-semibold text-dark">{formatPrice(parseFloat(r.refund_amount || r.total_amount))}</td>
+                  <td className="px-4 py-3 text-text-secondary">{new Date(r.created_at).toLocaleDateString('it-IT')}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-heading font-semibold ${RETURN_STATUS_COLORS[r.status]}`}>
+                      {RETURN_STATUS_LABELS[r.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => openDetail(r.id)} className="text-brand hover:text-brand/70 text-xs font-heading font-semibold transition-colors">
+                      Dettagli →
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {total > 20 && (
+            <div className="flex justify-center gap-2 p-4 border-t border-gray-100">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-text-secondary disabled:opacity-30 hover:border-brand/40 transition-colors">← Prec</button>
+              <button onClick={() => setPage(p => p + 1)} disabled={page * 20 >= total} className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-text-secondary disabled:opacity-30 hover:border-brand/40 transition-colors">Succ →</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN ADMIN DASHBOARD ──────────────────────────────────────────────────
+// ─── GIFT CARDS TAB ──────────────────────────────────────────────────────────
+function GiftCardsTab() {
+  const [data, setData] = useState({ cards: [], stats: {}, pagination: {} });
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('');
+  const [search, setSearch] = useState('');
+  const [showIssue, setShowIssue] = useState(false);
+  const [issueForm, setIssueForm] = useState({ amount: 50, recipient_email: '' });
+
+  const load = () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    api.get(`/admin/gift-cards?${params}`)
+      .then(d => setData(d))
+      .catch(() => toast.error('Errore caricamento'))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [status]);
+
+  const issue = async () => {
+    try {
+      await api.post('/admin/gift-cards', issueForm);
+      toast.success('Gift card emessa');
+      setShowIssue(false);
+      setIssueForm({ amount: 50, recipient_email: '' });
+      load();
+    } catch (err) { toast.error(err.message || 'Errore'); }
+  };
+
+  const disable = async (id) => {
+    if (!window.confirm('Disabilitare questa gift card?')) return;
+    try { await api.patch(`/admin/gift-cards/${id}/disable`); toast.success('Disabilitata'); load(); }
+    catch (err) { toast.error(err.message || 'Errore'); }
+  };
+
+  const STATUS_BADGE = {
+    active: 'bg-green-100 text-green-700',
+    used: 'bg-gray-100 text-gray-600',
+    disabled: 'bg-red-100 text-red-700',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Gift card emesse" value={data.stats?.count || 0} icon={FiGift} />
+        <StatCard title="Valore emesso" value={formatPrice(data.stats?.issued || 0)} icon={FiDollarSign} color="green-600" />
+        <StatCard title="Saldo residuo" value={formatPrice(data.stats?.outstanding || 0)} icon={FiTrendingUp} color="brand" />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-48">
+          <FiSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && load()}
+            placeholder="Cerca codice o email..."
+            className="input pl-9 text-sm py-2.5 w-full"
+          />
+        </div>
+        <select value={status} onChange={e => setStatus(e.target.value)} className="input text-sm py-2.5 w-auto">
+          <option value="">Tutti gli stati</option>
+          <option value="active">Attive</option>
+          <option value="used">Usate</option>
+          <option value="disabled">Disabilitate</option>
+        </select>
+        <button onClick={() => setShowIssue(true)} className="btn btn-primary text-sm px-4 py-2.5 flex items-center gap-2">
+          <FiPlus size={15} /> Emetti
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-text-secondary">Caricamento...</div>
+        ) : data.cards.length === 0 ? (
+          <div className="p-12 text-center text-text-secondary">Nessuna gift card.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-text-secondary text-xs uppercase">
+              <tr>
+                <th className="text-left px-4 py-3 font-heading">Codice</th>
+                <th className="text-left px-4 py-3 font-heading">Saldo / Iniziale</th>
+                <th className="text-left px-4 py-3 font-heading">Stato</th>
+                <th className="text-left px-4 py-3 font-heading">Destinatario</th>
+                <th className="text-right px-4 py-3 font-heading">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.cards.map(c => (
+                <tr key={c.id} className="border-t border-gray-100">
+                  <td className="px-4 py-3 font-mono text-dark">{c.code}</td>
+                  <td className="px-4 py-3">{formatPrice(c.balance)} / {formatPrice(c.initial_amount)}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[c.status]}`}>{c.status}</span></td>
+                  <td className="px-4 py-3 text-text-secondary">{c.recipient_email || c.purchaser_email || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    {c.status === 'active' && (
+                      <button onClick={() => disable(c.id)} className="text-red-500 hover:text-red-700 text-xs">Disabilita</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Issue modal */}
+      <AnimatePresence>
+        {showIssue && (
+          <motion.div className="fixed inset-0 bg-dark/50 z-50 flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowIssue(false)}>
+            <motion.div className="bg-white rounded-2xl p-6 w-full max-w-md" initial={{ scale: 0.95 }} animate={{ scale: 1 }} onClick={e => e.stopPropagation()}>
+              <h3 className="font-heading font-bold text-dark text-lg mb-4">Emetti Gift Card</h3>
+              <label className="label">Importo (€)</label>
+              <input type="number" value={issueForm.amount} onChange={e => setIssueForm(f => ({ ...f, amount: parseFloat(e.target.value) }))} className="input mb-4" />
+              <label className="label">Email destinatario (opzionale)</label>
+              <input type="email" value={issueForm.recipient_email} onChange={e => setIssueForm(f => ({ ...f, recipient_email: e.target.value }))} className="input mb-5" placeholder="cliente@example.com" />
+              <div className="flex gap-3">
+                <button onClick={() => setShowIssue(false)} className="btn btn-outline flex-1 py-2.5">Annulla</button>
+                <button onClick={issue} className="btn btn-primary flex-1 py-2.5">Emetti</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── MARKETING TAB ───────────────────────────────────────────────────────────
+function MarketingTab() {
+  const [stats, setStats] = useState({ total: 0, active: 0 });
+  const [form, setForm] = useState({ subject: '', heading: '', body: '', cta_text: '', cta_url: '' });
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    api.get('/admin/newsletter/subscribers')
+      .then(d => setStats({ total: d.total, active: d.active }))
+      .catch(() => {});
+  }, []);
+
+  const send = async () => {
+    if (!form.subject.trim() || !form.body.trim()) return toast.error('Oggetto e contenuto obbligatori');
+    if (!window.confirm(`Inviare la campagna a ${stats.active} iscritti?`)) return;
+    setSending(true);
+    try {
+      const d = await api.post('/admin/newsletter/campaign', form);
+      toast.success(d.message);
+      setForm({ subject: '', heading: '', body: '', cta_text: '', cta_url: '' });
+    } catch (err) { toast.error(err.message || 'Errore invio'); }
+    finally { setSending(false); }
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard title="Iscritti totali" value={stats.total} icon={FiUsers} />
+        <StatCard title="Iscritti attivi" value={stats.active} icon={FiMail} color="green-600" />
+      </div>
+
+      <div className="card p-6 space-y-4">
+        <h3 className="font-heading font-bold text-dark text-lg flex items-center gap-2">
+          <FiSend size={18} className="text-brand" /> Nuova campagna email
+        </h3>
+
+        <div>
+          <label className="label">Oggetto email *</label>
+          <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} className="input" placeholder="Offerta speciale per te!" />
+        </div>
+        <div>
+          <label className="label">Titolo (heading nel corpo)</label>
+          <input value={form.heading} onChange={e => setForm(f => ({ ...f, heading: e.target.value }))} className="input" placeholder="Se vuoto, usa l'oggetto" />
+        </div>
+        <div>
+          <label className="label">Contenuto * <span className="text-text-secondary font-normal">(HTML consentito)</span></label>
+          <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={6} className="input resize-none font-mono text-sm" placeholder="<p>Ciao! Questa settimana...</p>" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Testo bottone CTA</label>
+            <input value={form.cta_text} onChange={e => setForm(f => ({ ...f, cta_text: e.target.value }))} className="input" placeholder="Scopri ora" />
+          </div>
+          <div>
+            <label className="label">URL bottone CTA</label>
+            <input value={form.cta_url} onChange={e => setForm(f => ({ ...f, cta_url: e.target.value }))} className="input" placeholder="https://..." />
+          </div>
+        </div>
+
+        <button onClick={send} disabled={sending} className="btn btn-primary w-full py-3 flex items-center justify-center gap-2">
+          {sending ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><FiSend size={15} /> Invia a {stats.active} iscritti</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ANALYTICS TAB ───────────────────────────────────────────────────────────
+const PIE_COLORS = ['#D8125B', '#7c3aed', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899'];
+
+function AnalyticsTab() {
+  const [data, setData] = useState(null);
+  const [days, setDays] = useState(30);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/admin/analytics?days=${days}`)
+      .then(setData)
+      .catch(() => toast.error('Errore caricamento analytics'))
+      .finally(() => setLoading(false));
+  }, [days]);
+
+  if (loading) return <div className="h-96 rounded-2xl bg-gray-100 animate-pulse" />;
+  if (!data) return <p className="text-text-secondary text-center py-12">Nessun dato.</p>;
+
+  const { kpi, dailySales, byCategory, topProducts, statusDist, newCustomers } = data;
+
+  return (
+    <div className="space-y-6">
+      {/* Period selector */}
+      <div className="flex items-center gap-2">
+        {[7, 30, 90, 365].map(d => (
+          <button
+            key={d}
+            onClick={() => setDays(d)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-heading font-medium transition-all ${days === d ? 'bg-brand text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'}`}
+          >
+            {d === 365 ? '1 anno' : `${d}gg`}
+          </button>
+        ))}
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title={`Ricavi (${days}gg)`} value={formatPrice(kpi.revenue)} icon={FiDollarSign} color="green-600" />
+        <StatCard title="Ordini pagati" value={kpi.paid_orders} icon={FiShoppingCart} />
+        <StatCard title="Valore medio ordine" value={formatPrice(kpi.avg_order_value)} icon={FiTrendingUp} color="brand" />
+        <StatCard title="Iscritti newsletter" value={kpi.subscribers} icon={FiMail} />
+      </div>
+
+      {/* Sales over time */}
+      <div className="card p-6">
+        <h3 className="font-heading font-bold text-dark mb-4">Ricavi giornalieri</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <AreaChart data={dailySales}>
+            <defs>
+              <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#D8125B" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#D8125B" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => d?.slice(5)} />
+            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `€${v}`} />
+            <Tooltip formatter={v => formatPrice(v)} labelFormatter={d => `Data: ${d}`} />
+            <Area type="monotone" dataKey="revenue" stroke="#D8125B" strokeWidth={2} fill="url(#revGrad)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Revenue by category */}
+        <div className="card p-6">
+          <h3 className="font-heading font-bold text-dark mb-4">Ricavi per categoria</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={byCategory} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `€${v}`} />
+              <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={90} />
+              <Tooltip formatter={v => formatPrice(v)} />
+              <Bar dataKey="revenue" fill="#7c3aed" radius={[0, 6, 6, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Order status distribution */}
+        <div className="card p-6">
+          <h3 className="font-heading font-bold text-dark mb-4">Distribuzione ordini per stato</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie data={statusDist} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85} label={e => e.status}>
+                {statusDist.map((entry, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Top products */}
+      <div className="card p-6">
+        <h3 className="font-heading font-bold text-dark mb-4">Prodotti più venduti</h3>
+        <div className="space-y-2">
+          {topProducts.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+              <span className="font-display font-bold text-text-secondary w-6">{i + 1}</span>
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <img src={p.image_url || `https://picsum.photos/seed/${p.id}/80/80`} alt="" className="w-full h-full object-cover" />
+              </div>
+              <p className="flex-1 font-heading font-medium text-dark text-sm truncate">{p.name}</p>
+              <span className="text-text-secondary text-xs">{p.units} pz</span>
+              <span className="font-heading font-bold text-brand text-sm w-20 text-right">{formatPrice(p.revenue)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TAB_COMPONENTS = {
   dashboard: DashboardTab,
   products: ProductsTab,
@@ -1438,11 +2041,15 @@ const TAB_COMPONENTS = {
   users: UsersTab,
   coupons: CouponsTab,
   inventory: InventoryTab,
+  returns: ReturnsTab,
+  giftcards: GiftCardsTab,
+  marketing: MarketingTab,
+  analytics: AnalyticsTab,
   settings: SettingsTab,
 };
 
 // Tabs a moderator (read-only role) is allowed to see
-const MODERATOR_TABS = ['products', 'orders', 'users', 'coupons', 'inventory'];
+const MODERATOR_TABS = ['products', 'orders', 'users', 'coupons', 'inventory', 'returns'];
 
 export default function AdminDashboard() {
   const { user, logout } = useAuthStore();

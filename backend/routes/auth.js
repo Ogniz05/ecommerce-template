@@ -8,6 +8,7 @@ const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
 const { sendEmail, emailTemplates } = require('../config/email');
 const { authenticate } = require('../middleware/auth');
+const passport = require('../config/passport');
 
 const generateToken = (id, role) =>
   jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
@@ -80,7 +81,31 @@ router.post('/login', [
       { replacements: [email], type: QueryTypes.SELECT }
     );
 
-    if (!user || !await bcrypt.compare(password, user.password)) {
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_MINUTES = 15;
+
+    if (user?.locked_until && new Date(user.locked_until) > new Date()) {
+      const minutesLeft = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+      return res.status(429).json({ success: false, message: `Account bloccato. Riprova tra ${minutesLeft} minuti.` });
+    }
+
+    const passwordValid = user && await bcrypt.compare(password, user.password_hash || user.password);
+
+    if (!user || !passwordValid) {
+      if (user) {
+        const attempts = (user.failed_login_attempts || 0) + 1;
+        if (attempts >= MAX_ATTEMPTS) {
+          await sequelize.query(
+            'UPDATE users SET failed_login_attempts = ?, locked_until = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?',
+            { replacements: [attempts, LOCKOUT_MINUTES, user.id], type: QueryTypes.UPDATE }
+          );
+          return res.status(429).json({ success: false, message: `Troppi tentativi. Account bloccato per ${LOCKOUT_MINUTES} minuti.` });
+        }
+        await sequelize.query(
+          'UPDATE users SET failed_login_attempts = ? WHERE id = ?',
+          { replacements: [attempts, user.id], type: QueryTypes.UPDATE }
+        );
+      }
       return res.status(401).json({ success: false, message: 'Credenziali non valide' });
     }
 
@@ -88,9 +113,10 @@ router.post('/login', [
       return res.status(403).json({ success: false, message: 'Account disabilitato' });
     }
 
-    await sequelize.query('UPDATE users SET last_login = NOW() WHERE id = ?', {
-      replacements: [user.id], type: QueryTypes.UPDATE
-    });
+    await sequelize.query(
+      'UPDATE users SET last_login = NOW(), failed_login_attempts = 0, locked_until = NULL WHERE id = ?',
+      { replacements: [user.id], type: QueryTypes.UPDATE }
+    );
 
     const token = generateToken(user.id, user.role);
     res.json({
@@ -191,6 +217,28 @@ router.get('/verify-email', async (req, res, next) => {
 
     res.json({ success: true, message: 'Email verificata con successo!' });
   } catch (error) { next(error); }
+});
+
+// GET /api/auth/google — redirect to Google (only if configured)
+router.get('/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ success: false, message: 'Google Login non configurato' });
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+});
+
+// GET /api/auth/google/callback
+router.get('/google/callback', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.redirect(`${process.env.CLIENT_URL}/auth/login?error=google`);
+  }
+  passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/auth/login?error=google` },
+    (err, user) => {
+      if (err || !user) return res.redirect(`${process.env.CLIENT_URL}/auth/login?error=google`);
+      const token = generateToken(user.id, user.role || 'customer');
+      res.redirect(`${process.env.CLIENT_URL}/auth/social-callback?token=${token}`);
+    }
+  )(req, res, next);
 });
 
 module.exports = router;

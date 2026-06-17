@@ -10,7 +10,7 @@ router.post('/validate', authenticate, async (req, res, next) => {
     const { code, subtotal } = req.body;
 
     const [coupon] = await sequelize.query(
-      `SELECT * FROM coupons WHERE code = ? AND is_active = 1
+      `SELECT * FROM coupons WHERE UPPER(code) = UPPER(?) AND is_active = 1
        AND (valid_from IS NULL OR valid_from <= NOW())
        AND (valid_until IS NULL OR valid_until >= NOW())
        AND (max_uses IS NULL OR current_uses < max_uses)`,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiChevronRight, FiLock } from 'react-icons/fi';
+import { FiCheck, FiChevronRight, FiLock, FiUser, FiGift, FiAward, FiX } from 'react-icons/fi';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useCartStore, useAuthStore, selectSubtotal } from '../store/useStore';
@@ -241,7 +241,7 @@ function PaymentStep({ orderId, totalAmount, onSuccess, onBack }) {
   );
 }
 
-function SuccessStep({ orderId, orderNumber }) {
+function SuccessStep({ orderId, orderNumber, isGuest }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -265,11 +265,20 @@ function SuccessStep({ orderId, orderNumber }) {
       <h2 className="font-display font-bold text-3xl text-dark mb-3">{t('checkout.orderConfirmed')}</h2>
       <p className="text-text-secondary mb-2">{t('checkout.thankYou')}</p>
       <p className="text-text-secondary text-sm mb-1">{t('checkout.orderNumber')}: <strong className="text-dark font-mono">{orderNumber}</strong></p>
-      <p className="text-text-secondary text-sm mb-8">{t('checkout.confirmationEmail')}</p>
+      <p className="text-text-secondary text-sm mb-8">
+        {isGuest ? 'Riceverai una email di conferma con i dettagli del tuo ordine.' : t('checkout.confirmationEmail')}
+      </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <button onClick={() => navigate(`/profilo/ordini/${orderId}`)} className="btn btn-primary px-8 py-3">
-          {t('checkout.trackOrder')}
-        </button>
+        {!isGuest && (
+          <button onClick={() => navigate(`/profilo/ordini/${orderId}`)} className="btn btn-primary px-8 py-3">
+            {t('checkout.trackOrder')}
+          </button>
+        )}
+        {isGuest && (
+          <button onClick={() => navigate('/auth/register')} className="btn btn-primary px-8 py-3">
+            Crea Account per Tracciare l&apos;Ordine
+          </button>
+        )}
         <button onClick={() => navigate('/catalogo')} className="btn btn-outline px-8 py-3">
           Continua gli Acquisti
         </button>
@@ -297,9 +306,33 @@ export default function Checkout() {
   const [orderNumber, setOrderNumber] = useState(null);
   const [creatingOrder, setCreatingOrder] = useState(false);
 
+  // Loyalty + gift card
+  const [loyalty, setLoyalty] = useState(null);        // { points, value, config }
+  const [usePoints, setUsePoints] = useState(false);
+  const [giftCode, setGiftCode] = useState('');
+  const [giftCard, setGiftCard] = useState(null);      // { code, balance }
+  const [giftLoading, setGiftLoading] = useState(false);
+
   useEffect(() => {
     if (items.length === 0 && step < 3) navigate('/catalogo');
   }, [items, step, navigate]);
+
+  useEffect(() => {
+    if (user) api.get('/loyalty').then(setLoyalty).catch(() => {});
+  }, [user]);
+
+  const validateGiftCard = async () => {
+    if (!giftCode.trim()) return;
+    setGiftLoading(true);
+    try {
+      const d = await api.post('/gift-cards/validate', { code: giftCode });
+      setGiftCard({ code: d.code, balance: d.balance });
+      toast.success(`Gift card valida: saldo ${formatPrice(d.balance)}`);
+    } catch (err) {
+      toast.error(err.message || 'Gift card non valida');
+      setGiftCard(null);
+    } finally { setGiftLoading(false); }
+  };
 
   const createOrder = async () => {
     setCreatingOrder(true);
@@ -314,7 +347,9 @@ export default function Checkout() {
         items: orderItems,
         shipping_address: address,
         billing_address: address,
-        shipping_method: shippingMethod?.id || 1
+        shipping_method: shippingMethod?.id || 1,
+        points_to_redeem: pointsToRedeem,
+        gift_card_code: giftCard?.code || null
       });
 
       setOrderId(data.orderId);
@@ -333,7 +368,15 @@ export default function Checkout() {
   const shippingCost = shippingMethod
     ? (shippingMethod.is_free ? 0 : parseFloat(shippingMethod.price || 0))
     : 4.99;
-  const total = subtotal + shippingCost + subtotal * 0.22;
+  const grossTotal = subtotal + shippingCost + subtotal * 0.22;
+
+  const minRedeem = loyalty?.config?.min_redeem || 100;
+  const redeemRate = loyalty?.config?.redeem_rate || 100;
+  const pointsToRedeem = usePoints && loyalty?.points >= minRedeem ? loyalty.points : 0;
+  const pointsDiscount = Math.min(pointsToRedeem / redeemRate, grossTotal);
+  const afterPoints = grossTotal - pointsDiscount;
+  const giftDiscount = giftCard ? Math.min(giftCard.balance, afterPoints) : 0;
+  const total = Math.max(0, afterPoints - giftDiscount);
 
   return (
     <div className="page-wrapper">
@@ -365,6 +408,18 @@ export default function Checkout() {
           </div>
         )}
 
+        {/* Guest banner — shown only when not logged in and before payment */}
+        {!user && step < 2 && (
+          <motion.div
+            className="mb-6 p-4 rounded-2xl border border-brand/20 bg-brand/5 flex flex-wrap items-center gap-3"
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          >
+            <FiUser size={16} className="text-brand flex-shrink-0" />
+            <p className="text-sm text-dark flex-1">Hai già un account? <a href="/auth/login" className="text-brand font-semibold hover:underline">Accedi</a> per salvare l&apos;ordine nel tuo profilo.</p>
+            <span className="text-xs text-text-secondary">oppure continua come ospite qui sotto</span>
+          </motion.div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main */}
           <div className="lg:col-span-2">
@@ -390,7 +445,7 @@ export default function Checkout() {
                     onBack={() => setStep(1)}
                   />
                 )}
-                {step === 3 && <SuccessStep key="done" orderId={orderId} orderNumber={orderNumber} />}
+                {step === 3 && <SuccessStep key="done" orderId={orderId} orderNumber={orderNumber} isGuest={!user} />}
               </AnimatePresence>
               {creatingOrder && (
                 <div className="flex items-center justify-center gap-3 py-4">
@@ -424,6 +479,64 @@ export default function Checkout() {
                   </div>
                 ))}
               </div>
+              {/* ── Redemption: loyalty points + gift card ── */}
+              {step < 2 && (
+                <div className="border-t border-gray-100 pt-4 space-y-3 mb-1">
+                  {/* Loyalty points */}
+                  {user && loyalty && loyalty.points >= minRedeem && (
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={usePoints}
+                        onChange={e => setUsePoints(e.target.checked)}
+                        className="mt-0.5 accent-brand w-4 h-4"
+                      />
+                      <span className="text-sm">
+                        <span className="font-heading font-semibold text-dark flex items-center gap-1.5">
+                          <FiAward size={13} className="text-brand" /> Usa {loyalty.points} punti
+                        </span>
+                        <span className="text-text-secondary text-xs">
+                          Risparmi {formatPrice(loyalty.value)}
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
+                  {/* Gift card */}
+                  {giftCard ? (
+                    <div className="flex items-center justify-between bg-purple-50 rounded-xl p-2.5">
+                      <span className="text-sm flex items-center gap-1.5 text-purple-700 font-heading font-semibold">
+                        <FiGift size={13} /> {giftCard.code}
+                      </span>
+                      <button
+                        onClick={() => { setGiftCard(null); setGiftCode(''); }}
+                        className="text-purple-500 hover:text-red-500 transition-colors"
+                      >
+                        <FiX size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={giftCode}
+                        onChange={e => setGiftCode(e.target.value.toUpperCase())}
+                        placeholder="Gift card"
+                        className="input flex-1 text-sm py-2 font-mono"
+                        onKeyDown={e => e.key === 'Enter' && validateGiftCard()}
+                      />
+                      <button
+                        onClick={validateGiftCard}
+                        disabled={giftLoading || !giftCode.trim()}
+                        className="btn btn-outline px-3 py-2 text-xs disabled:opacity-50"
+                      >
+                        {giftLoading ? '...' : 'Usa'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="border-t border-gray-100 pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-text-secondary">
                   <span>{t('cart.subtotal')}</span><span>{formatPrice(subtotal)}</span>
@@ -435,10 +548,27 @@ export default function Checkout() {
                 <div className="flex justify-between text-sm text-text-secondary">
                   <span>IVA (22%)</span><span>{formatPrice(subtotal * 0.22)}</span>
                 </div>
+                {pointsDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-brand">
+                    <span className="flex items-center gap-1"><FiAward size={11} /> Punti fedeltà</span>
+                    <span>-{formatPrice(pointsDiscount)}</span>
+                  </div>
+                )}
+                {giftDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-purple-600">
+                    <span className="flex items-center gap-1"><FiGift size={11} /> Gift card</span>
+                    <span>-{formatPrice(giftDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-heading font-bold text-dark border-t border-gray-100 pt-2 mt-2">
                   <span>{t('cart.total')}</span>
                   <span className="text-brand text-lg">{formatPrice(total)}</span>
                 </div>
+                {loyalty && total > 0 && (
+                  <p className="text-text-secondary text-[11px] flex items-center gap-1 pt-1">
+                    <FiAward size={10} className="text-brand" /> Guadagnerai {Math.floor(total)} punti con questo ordine
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

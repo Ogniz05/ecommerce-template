@@ -7,6 +7,7 @@ import {
   FiChevronRight, FiMail, FiCheck, FiZap, FiAward, FiHeart
 } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import api from '../utils/api';
 import { staggerContainer, staggerItem, fadeInUp } from '../utils/animations';
 import { useInView } from 'react-intersection-observer';
@@ -542,6 +543,16 @@ export default function Home() {
 
   return (
     <div className="overflow-x-hidden">
+      <SEO
+        title="Home"
+        description="Scopri la nostra selezione di prodotti premium. Spedizione rapida, resi gratuiti entro 30 giorni, pagamenti sicuri."
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'ShopTemplate',
+          url: typeof window !== 'undefined' ? window.location.origin : '',
+        }}
+      />
 
       {/* ─── HERO ────────────────────────────────────────── */}
       <section

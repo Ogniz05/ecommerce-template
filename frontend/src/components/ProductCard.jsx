@@ -187,6 +187,31 @@ export default function ProductCard({ product, index = 0 }) {
             </div>
           )}
 
+          {/* Color swatches */}
+          {(() => {
+            const colors = product.color_variants
+              ? (typeof product.color_variants === 'string' ? JSON.parse(product.color_variants) : product.color_variants).filter(c => c?.color_hex)
+              : [];
+            if (!colors.length) return null;
+            const visible = colors.slice(0, 4);
+            const extra = colors.length - visible.length;
+            return (
+              <div className="flex items-center gap-1.5 mt-2.5">
+                {visible.map(c => (
+                  <span
+                    key={c.id}
+                    title={c.value}
+                    className="w-4 h-4 rounded-full border border-white ring-1 ring-gray-200 flex-shrink-0"
+                    style={{ backgroundColor: c.color_hex }}
+                  />
+                ))}
+                {extra > 0 && (
+                  <span className="text-text-secondary text-[10px] font-body">+{extra}</span>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Price */}
           <div className="flex items-center gap-2 mt-3">
             <motion.span

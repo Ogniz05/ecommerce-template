@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { FiShoppingCart, FiHeart, FiShare2, FiStar, FiTruck, FiRefreshCw, FiShield, FiMinus, FiPlus, FiChevronRight } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiShare2, FiStar, FiTruck, FiRefreshCw, FiShield, FiMinus, FiPlus, FiChevronRight, FiBell, FiBellOff } from 'react-icons/fi';
 import { useCartStore, useWishlistStore, useAuthStore } from '../store/useStore';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import api from '../utils/api';
 import { formatPrice, formatDate, generateStars } from '../utils/formatters';
 import { fadeInUp, staggerContainer, staggerItem } from '../utils/animations';
@@ -101,6 +102,9 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState('description');
   const [addingCart, setAddingCart] = useState(false);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [alertSubscribed, setAlertSubscribed] = useState(false);
+  const [alertLoading, setAlertLoading] = useState(false);
 
   const lang = localStorage.getItem('language') || 'it';
 
@@ -116,6 +120,38 @@ export default function ProductDetail() {
   }, [slug, lang]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Check stock alert subscription after product loads
+  useEffect(() => {
+    if (!product) return;
+    const email = user?.email;
+    if (!email) return;
+    setAlertEmail(email);
+    api.get(`/products/${product.id}/stock-alert`)
+      .then(d => setAlertSubscribed(d.subscribed))
+      .catch(() => {});
+  }, [product, user]);
+
+  const toggleStockAlert = async () => {
+    const email = alertEmail.trim();
+    if (!email) return toast.error('Inserisci la tua email');
+    setAlertLoading(true);
+    try {
+      if (alertSubscribed) {
+        await api.delete(`/products/${product.id}/stock-alert`, { data: { email } });
+        setAlertSubscribed(false);
+        toast.success('Iscrizione rimossa');
+      } else {
+        await api.post(`/products/${product.id}/stock-alert`, { email });
+        setAlertSubscribed(true);
+        toast.success('Ti avviseremo quando tornerà disponibile!');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Errore');
+    } finally { setAlertLoading(false); }
+  };
+
+  const { user } = useAuthStore();
 
   const { product, variants, reviews, related } = data;
   const inWishlist = product ? has(product.id) : false;
@@ -170,8 +206,37 @@ export default function ProductDetail() {
     </div>
   );
 
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.display_name || product.name,
+    image: images.length ? images : undefined,
+    description: product.display_short_desc || product.short_description || product.description,
+    sku: product.sku || undefined,
+    offers: {
+      '@type': 'Offer',
+      price: currentPrice.toFixed(2),
+      priceCurrency: 'EUR',
+      availability: isOutOfStock ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+    },
+    ...(product.avg_rating > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: parseFloat(product.avg_rating).toFixed(1),
+        reviewCount: product.review_count || 0,
+      },
+    }),
+  };
+
   return (
     <div className="page-wrapper">
+      <SEO
+        title={product.display_name || product.name}
+        description={product.display_short_desc || product.short_description || `Acquista ${product.name} su ShopTemplate`}
+        image={images[0]}
+        type="product"
+        jsonLd={productJsonLd}
+      />
       <div className="container-app py-10">
 
         {/* Breadcrumb */}
@@ -311,42 +376,78 @@ export default function ProductDetail() {
             )}
 
             {/* Variants */}
-            {Object.entries(variantGroups).map(([type, variantList]) => (
-              <motion.div key={type} variants={staggerItem}>
-                <p className="font-heading font-semibold text-dark text-sm mb-3 capitalize">
-                  {type.replace('_', ' ')}: {selectedVariant && variantGroups[type]?.find(v => v.id === selectedVariant.id)?.value && (
-                    <span className="text-brand">{selectedVariant.value}</span>
-                  )}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {variantList.map(v => {
-                    const isSelected = selectedVariant?.id === v.id;
-                    const variantStock = parseInt(v.stock || 0);
-                    const oos = variantStock === 0;
-                    return (
-                      <motion.button
-                        key={v.id}
-                        onClick={() => !oos && setSelectedVariant(isSelected ? null : v)}
-                        disabled={oos}
-                        className={`relative px-4 py-2 rounded-xl border-2 font-heading font-medium text-sm transition-all
-                          ${isSelected ? 'border-brand bg-brand/5 text-brand' : oos ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-dark hover:border-brand hover:text-brand'}`}
-                        whileHover={!oos ? { scale: 1.03 } : {}}
-                        whileTap={!oos ? { scale: 0.97 } : {}}
-                      >
-                        {v.color_hex && (
-                          <span
-                            className="inline-block w-4 h-4 rounded-full border border-white/50 mr-2"
+            {Object.entries(variantGroups).map(([type, variantList]) => {
+              const isColorType = type === 'color';
+              const selectedInGroup = variantList.find(v => v.id === selectedVariant?.id);
+              return (
+                <motion.div key={type} variants={staggerItem}>
+                  <p className="font-heading font-semibold text-dark text-sm mb-3 capitalize flex items-center gap-2">
+                    {type.replace(/_/g, ' ')}
+                    {selectedInGroup && (
+                      <span className="text-brand font-medium">— {selectedInGroup.value}</span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {variantList.map(v => {
+                      const isSelected = selectedVariant?.id === v.id;
+                      const variantStock = parseInt(v.stock || 0);
+                      const oos = variantStock === 0;
+
+                      if (isColorType && v.color_hex) {
+                        return (
+                          <motion.button
+                            key={v.id}
+                            onClick={() => !oos && setSelectedVariant(isSelected ? null : v)}
+                            disabled={oos}
+                            title={`${v.value}${oos ? ' (esaurito)' : ''}`}
+                            className={`relative w-9 h-9 rounded-full transition-all ${
+                              isSelected
+                                ? 'ring-2 ring-brand ring-offset-2 border-2 border-white'
+                                : oos
+                                ? 'cursor-not-allowed opacity-40 border-2 border-transparent'
+                                : 'border-2 border-transparent hover:ring-2 hover:ring-brand/40 hover:ring-offset-1'
+                            }`}
                             style={{ backgroundColor: v.color_hex }}
-                          />
-                        )}
-                        {v.value}
-                        {oos && <span className="absolute inset-0 flex items-center justify-center"><span className="w-full h-px bg-gray-300 rotate-45 transform origin-center" /></span>}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            ))}
+                            whileHover={!oos ? { scale: 1.1 } : {}}
+                            whileTap={!oos ? { scale: 0.9 } : {}}
+                          >
+                            {oos && (
+                              <span className="absolute inset-0 rounded-full overflow-hidden flex items-center justify-center">
+                                <span className="w-full h-px bg-white/70 rotate-45 block" />
+                              </span>
+                            )}
+                          </motion.button>
+                        );
+                      }
+
+                      return (
+                        <motion.button
+                          key={v.id}
+                          onClick={() => !oos && setSelectedVariant(isSelected ? null : v)}
+                          disabled={oos}
+                          className={`relative px-4 py-2 rounded-xl border-2 font-heading font-medium text-sm transition-all ${
+                            isSelected
+                              ? 'border-brand bg-brand/5 text-brand'
+                              : oos
+                              ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                              : 'border-gray-200 text-dark hover:border-brand hover:text-brand'
+                          }`}
+                          whileHover={!oos ? { scale: 1.03 } : {}}
+                          whileTap={!oos ? { scale: 0.97 } : {}}
+                        >
+                          {v.value}
+                          {oos && (
+                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="w-full h-px bg-gray-300 rotate-45 block" />
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              );
+            })}
 
             {/* Stock indicator */}
             <motion.div variants={staggerItem} className="flex items-center gap-2">
@@ -355,6 +456,52 @@ export default function ProductDetail() {
                 {isOutOfStock ? t('products.outOfStock') : stock <= 5 ? `${t('products.lastItems')}: ${stock}` : 'Disponibile'}
               </span>
             </motion.div>
+
+            {/* Stock alert — shown only when out of stock */}
+            {isOutOfStock && (
+              <motion.div
+                variants={staggerItem}
+                className="p-4 rounded-2xl bg-gray-50 border border-gray-200"
+              >
+                <p className="font-heading font-semibold text-dark text-sm mb-3 flex items-center gap-2">
+                  <FiBell size={14} className="text-brand" />
+                  Avvisami quando torna disponibile
+                </p>
+                {alertSubscribed ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-green-600 text-sm font-body">✓ Riceverai una notifica via email</p>
+                    <button
+                      onClick={toggleStockAlert}
+                      disabled={alertLoading}
+                      className="text-xs text-text-secondary hover:text-red-500 transition-colors flex items-center gap-1"
+                    >
+                      <FiBellOff size={12} /> Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={alertEmail}
+                      onChange={e => setAlertEmail(e.target.value)}
+                      placeholder="La tua email"
+                      className="input text-sm flex-1 py-2.5"
+                    />
+                    <motion.button
+                      onClick={toggleStockAlert}
+                      disabled={alertLoading}
+                      className="btn btn-primary text-sm px-4 py-2.5 flex items-center gap-1.5 flex-shrink-0"
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    >
+                      {alertLoading
+                        ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <><FiBell size={13} /> Avvisami</>
+                      }
+                    </motion.button>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
             {/* Quantity + Add to cart */}
             <motion.div variants={staggerItem} className="flex items-center gap-3">

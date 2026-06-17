@@ -69,6 +69,7 @@ const SHOP_LINKS = [
   { label: 'Nuovi Arrivi', path: '/catalogo?sort=newest' },
   { label: 'Offerte', path: '/catalogo?sale=true' },
   { label: 'Prodotti in Evidenza', path: '/catalogo?featured=true' },
+  { label: 'Gift Card', path: '/gift-card' },
 ];
 
 const INFO_LINKS = [

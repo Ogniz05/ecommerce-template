@@ -46,7 +46,10 @@ router.get('/', optionalAuth, async (req, res, next) => {
         ${lang === 'en' ? 'COALESCE(p.name_en, p.name)' : 'p.name'} as display_name,
         ${lang === 'en' ? 'COALESCE(p.short_description_en, p.short_description)' : 'p.short_description'} as display_short_desc,
         c.name as category_name, c.slug as category_slug,
-        COALESCE(SUM(i.quantity - i.reserved), 0) as stock
+        COALESCE(SUM(i.quantity - i.reserved), 0) as stock,
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', cv.id, 'color_hex', cv.color_hex, 'value', cv.value))
+         FROM (SELECT id, color_hex, value FROM product_variants WHERE product_id = p.id AND LOWER(type) = 'color' AND is_active = 1 LIMIT 6) cv
+        ) as color_variants
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        LEFT JOIN inventory i ON i.product_id = p.id AND i.variant_id IS NULL
@@ -78,7 +81,10 @@ router.get('/featured', async (req, res, next) => {
       `SELECT p.*,
         ${lang === 'en' ? 'COALESCE(p.name_en, p.name)' : 'p.name'} as display_name,
         c.name as category_name,
-        COALESCE(SUM(i.quantity - i.reserved), 0) as stock
+        COALESCE(SUM(i.quantity - i.reserved), 0) as stock,
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', cv.id, 'color_hex', cv.color_hex, 'value', cv.value))
+         FROM (SELECT id, color_hex, value FROM product_variants WHERE product_id = p.id AND LOWER(type) = 'color' AND is_active = 1 LIMIT 6) cv
+        ) as color_variants
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        LEFT JOIN inventory i ON i.product_id = p.id AND i.variant_id IS NULL

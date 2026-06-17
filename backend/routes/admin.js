@@ -7,6 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
+const { sendEmail, emailTemplates } = require('../config/email');
 
 // authenticate + read-level access (admin OR moderator) for the whole router.
 // Individual write routes and admin-only panels add isAdminOnly on top.
@@ -265,10 +266,36 @@ router.patch('/products/:id', async (req, res, next) => {
 
     // stock lives in inventory, not products table
     if (fields.stock_quantity !== undefined) {
+      const newQty = parseInt(fields.stock_quantity) || 0;
+      const [currentInv] = await sequelize.query(
+        'SELECT quantity - reserved as available FROM inventory WHERE product_id = ? AND variant_id IS NULL',
+        { replacements: [id], type: QueryTypes.SELECT }
+      );
       await sequelize.query(
         'UPDATE inventory SET quantity = ? WHERE product_id = ? AND variant_id IS NULL',
-        { replacements: [parseInt(fields.stock_quantity) || 0, id], type: QueryTypes.UPDATE }
+        { replacements: [newQty, id], type: QueryTypes.UPDATE }
       );
+      if (currentInv && currentInv.available <= 0 && newQty > 0) {
+        const [product] = await sequelize.query(
+          'SELECT id, name, slug, image_url FROM products WHERE id = ?',
+          { replacements: [id], type: QueryTypes.SELECT }
+        );
+        if (product) {
+          const alerts = await sequelize.query(
+            'SELECT email FROM stock_alerts WHERE product_id = ? AND variant_id IS NULL AND notified_at IS NULL',
+            { replacements: [id], type: QueryTypes.SELECT }
+          );
+          for (const alert of alerts) {
+            sendEmail({ to: alert.email, ...emailTemplates.stockAlert(product, alert.email) });
+          }
+          if (alerts.length > 0) {
+            await sequelize.query(
+              'UPDATE stock_alerts SET notified_at = NOW() WHERE product_id = ? AND variant_id IS NULL AND notified_at IS NULL',
+              { replacements: [id], type: QueryTypes.UPDATE }
+            );
+          }
+        }
+      }
     }
 
     res.json({ success: true, message: 'Prodotto aggiornato!' });
@@ -407,6 +434,20 @@ router.patch('/orders/:id/status', async (req, res, next) => {
 
     replacements.push(req.params.id);
     await sequelize.query(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`, { replacements, type: QueryTypes.UPDATE });
+
+    const EMAIL_STATUSES = ['processing', 'shipped', 'delivered', 'cancelled'];
+    if (EMAIL_STATUSES.includes(status)) {
+      try {
+        const [order] = await sequelize.query(
+          'SELECT o.*, u.email, u.first_name, u.last_name FROM orders o JOIN users u ON u.id = o.user_id WHERE o.id = ?',
+          { replacements: [req.params.id], type: QueryTypes.SELECT }
+        );
+        if (order) {
+          sendEmail({ to: order.email, ...emailTemplates.orderStatusChanged(order, order, status) }).catch(() => {});
+        }
+      } catch {}
+    }
+
     res.json({ success: true, message: 'Stato ordine aggiornato' });
   } catch (error) { next(error); }
 });
@@ -511,10 +552,46 @@ router.get('/inventory', async (req, res, next) => {
 router.patch('/inventory/:id', async (req, res, next) => {
   try {
     const { quantity, low_stock_threshold } = req.body;
+    const newQty = parseInt(quantity);
+
+    // Check current stock before update to detect 0→positive transition
+    const [current] = await sequelize.query(
+      'SELECT product_id, variant_id, quantity - reserved as available FROM inventory WHERE id = ?',
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+
     await sequelize.query(
       'UPDATE inventory SET quantity = ?, low_stock_threshold = COALESCE(?, low_stock_threshold) WHERE id = ?',
-      { replacements: [parseInt(quantity), low_stock_threshold||null, req.params.id], type: QueryTypes.UPDATE }
+      { replacements: [newQty, low_stock_threshold || null, req.params.id], type: QueryTypes.UPDATE }
     );
+
+    // Trigger stock alerts if product went from 0 → available
+    if (current && current.available <= 0 && newQty > 0) {
+      const [product] = await sequelize.query(
+        'SELECT id, name, slug, image_url FROM products WHERE id = ?',
+        { replacements: [current.product_id], type: QueryTypes.SELECT }
+      );
+      if (product) {
+        const alerts = await sequelize.query(
+          `SELECT email FROM stock_alerts
+           WHERE product_id = ? AND notified_at IS NULL
+           AND (variant_id = ? OR variant_id IS NULL)`,
+          { replacements: [current.product_id, current.variant_id || null], type: QueryTypes.SELECT }
+        );
+        for (const alert of alerts) {
+          sendEmail({ to: alert.email, ...emailTemplates.stockAlert(product, alert.email) });
+        }
+        if (alerts.length > 0) {
+          await sequelize.query(
+            `UPDATE stock_alerts SET notified_at = NOW()
+             WHERE product_id = ? AND notified_at IS NULL
+             AND (variant_id = ? OR variant_id IS NULL)`,
+            { replacements: [current.product_id, current.variant_id || null], type: QueryTypes.UPDATE }
+          );
+        }
+      }
+    }
+
     res.json({ success: true, message: 'Stock aggiornato' });
   } catch (error) { next(error); }
 });
@@ -571,6 +648,344 @@ router.put('/categories/:id', isAdminOnly, async (req, res, next) => {
       { replacements: [name, name_en||null, description||null, description_en||null, parent_id||null, sort_order||0, is_active !== false ? 1 : 0, req.params.id], type: QueryTypes.UPDATE }
     );
     res.json({ success: true, message: 'Categoria aggiornata' });
+  } catch (error) { next(error); }
+});
+
+// ─── RETURNS ─────────────────────────────────────────────────────────────────
+
+const stripe = require('../config/stripe');
+
+router.get('/returns', async (req, res, next) => {
+  try {
+    const { status, search, page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let where = '1=1';
+    const replacements = [];
+    if (status) { where += ' AND rr.status = ?'; replacements.push(status); }
+    if (search) {
+      where += ' AND (o.order_number LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name," ",u.last_name) LIKE ?)';
+      const like = `%${search}%`;
+      replacements.push(like, like, like);
+    }
+
+    const [returns, [{ total }]] = await Promise.all([
+      sequelize.query(
+        `SELECT rr.*, o.order_number, o.total_amount, o.stripe_payment_intent_id,
+                u.first_name, u.last_name, u.email
+         FROM return_requests rr
+         JOIN orders o ON o.id = rr.order_id
+         JOIN users u ON u.id = rr.user_id
+         WHERE ${where}
+         ORDER BY rr.created_at DESC
+         LIMIT ? OFFSET ?`,
+        { replacements: [...replacements, parseInt(limit), offset], type: QueryTypes.SELECT }
+      ),
+      sequelize.query(
+        `SELECT COUNT(*) AS total FROM return_requests rr
+         JOIN orders o ON o.id = rr.order_id
+         JOIN users u ON u.id = rr.user_id
+         WHERE ${where}`,
+        { replacements, type: QueryTypes.SELECT }
+      )
+    ]);
+
+    res.json({ success: true, returns, pagination: { total, page: parseInt(page), limit: parseInt(limit) } });
+  } catch (error) { next(error); }
+});
+
+router.get('/returns/:id', async (req, res, next) => {
+  try {
+    const [returnReq] = await sequelize.query(
+      `SELECT rr.*, o.order_number, o.total_amount, o.status AS order_status,
+              o.stripe_payment_intent_id, o.shipping_address,
+              u.first_name, u.last_name, u.email
+       FROM return_requests rr
+       JOIN orders o ON o.id = rr.order_id
+       JOIN users u ON u.id = rr.user_id
+       WHERE rr.id = ?`,
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+    if (!returnReq) return res.status(404).json({ success: false, message: 'Richiesta non trovata' });
+
+    const items = await sequelize.query(
+      'SELECT * FROM order_items WHERE order_id = ?',
+      { replacements: [returnReq.order_id], type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, return_request: returnReq, items });
+  } catch (error) { next(error); }
+});
+
+router.patch('/returns/:id/approve', isAdminOnly, async (req, res, next) => {
+  try {
+    const { refund_amount } = req.body;
+
+    const [returnReq] = await sequelize.query(
+      `SELECT rr.*, o.stripe_payment_intent_id, o.order_number, o.payment_method,
+              u.email, u.first_name, u.last_name
+       FROM return_requests rr
+       JOIN orders o ON o.id = rr.order_id
+       JOIN users u ON u.id = rr.user_id
+       WHERE rr.id = ?`,
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+    if (!returnReq) return res.status(404).json({ success: false, message: 'Richiesta non trovata' });
+    if (returnReq.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Richiesta già processata' });
+    }
+
+    const amount = parseFloat(refund_amount || returnReq.refund_amount);
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Importo rimborso non valido' });
+    }
+
+    let stripeRefundId = null;
+
+    if (returnReq.stripe_payment_intent_id && returnReq.payment_method === 'stripe') {
+      try {
+        const refund = await stripe.refunds.create({
+          payment_intent: returnReq.stripe_payment_intent_id,
+          amount: Math.round(amount * 100),
+          reason: 'requested_by_customer'
+        });
+        stripeRefundId = refund.id;
+      } catch (stripeErr) {
+        return res.status(422).json({ success: false, message: `Errore Stripe: ${stripeErr.message}` });
+      }
+    }
+
+    await sequelize.query(
+      `UPDATE return_requests SET status = 'refunded', refund_amount = ?, stripe_refund_id = ?, updated_at = NOW() WHERE id = ?`,
+      { replacements: [amount, stripeRefundId, req.params.id], type: QueryTypes.UPDATE }
+    );
+    await sequelize.query(
+      `UPDATE orders SET status = 'refunded', payment_status = 'refunded', updated_at = NOW() WHERE id = ?`,
+      { replacements: [returnReq.order_id], type: QueryTypes.UPDATE }
+    );
+
+    const [order] = await sequelize.query(
+      'SELECT order_number FROM orders WHERE id = ?',
+      { replacements: [returnReq.order_id], type: QueryTypes.SELECT }
+    );
+    const updatedReturn = { ...returnReq, refund_amount: amount };
+    sendEmail({
+      to: returnReq.email,
+      ...emailTemplates.returnApproved({ first_name: returnReq.first_name }, updatedReturn, order)
+    }).catch(() => {});
+
+    res.json({ success: true, message: 'Rimborso approvato ed elaborato', stripe_refund_id: stripeRefundId });
+  } catch (error) { next(error); }
+});
+
+router.patch('/returns/:id/reject', isAdminOnly, async (req, res, next) => {
+  try {
+    const { admin_notes } = req.body;
+
+    const [returnReq] = await sequelize.query(
+      `SELECT rr.*, o.order_number, u.email, u.first_name
+       FROM return_requests rr
+       JOIN orders o ON o.id = rr.order_id
+       JOIN users u ON u.id = rr.user_id
+       WHERE rr.id = ?`,
+      { replacements: [req.params.id], type: QueryTypes.SELECT }
+    );
+    if (!returnReq) return res.status(404).json({ success: false, message: 'Richiesta non trovata' });
+    if (returnReq.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Richiesta già processata' });
+    }
+
+    await sequelize.query(
+      `UPDATE return_requests SET status = 'rejected', admin_notes = ?, updated_at = NOW() WHERE id = ?`,
+      { replacements: [admin_notes || null, req.params.id], type: QueryTypes.UPDATE }
+    );
+
+    const [order] = await sequelize.query(
+      'SELECT order_number FROM orders WHERE id = ?',
+      { replacements: [returnReq.order_id], type: QueryTypes.SELECT }
+    );
+    sendEmail({
+      to: returnReq.email,
+      ...emailTemplates.returnRejected({ first_name: returnReq.first_name }, order, admin_notes)
+    }).catch(() => {});
+
+    res.json({ success: true, message: 'Richiesta rifiutata' });
+  } catch (error) { next(error); }
+});
+
+// ─── GIFT CARDS ──────────────────────────────────────────────────────────────
+
+router.get('/gift-cards', async (req, res, next) => {
+  try {
+    const { status, search, page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let where = '1=1';
+    const replacements = [];
+    if (status) { where += ' AND gc.status = ?'; replacements.push(status); }
+    if (search) { where += ' AND (gc.code LIKE ? OR gc.recipient_email LIKE ?)'; const l = `%${search}%`; replacements.push(l, l); }
+
+    const cards = await sequelize.query(
+      `SELECT gc.*, u.email AS purchaser_email
+       FROM gift_cards gc
+       LEFT JOIN users u ON u.id = gc.purchaser_user_id
+       WHERE ${where} ORDER BY gc.created_at DESC LIMIT ? OFFSET ?`,
+      { replacements: [...replacements, parseInt(limit), offset], type: QueryTypes.SELECT }
+    );
+    const [{ total }] = await sequelize.query(
+      `SELECT COUNT(*) total FROM gift_cards gc WHERE ${where}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+    const [stats] = await sequelize.query(
+      `SELECT COUNT(*) count, COALESCE(SUM(initial_amount),0) issued, COALESCE(SUM(balance),0) outstanding
+       FROM gift_cards`,
+      { type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, cards, stats, pagination: { total, page: parseInt(page) } });
+  } catch (error) { next(error); }
+});
+
+// Admin manually issues a gift card
+router.post('/gift-cards', isAdminOnly, async (req, res, next) => {
+  try {
+    const amount = parseFloat(req.body.amount);
+    const recipient_email = req.body.recipient_email?.trim().toLowerCase() || null;
+    if (!amount || amount <= 0) return res.status(400).json({ success: false, message: 'Importo non valido' });
+
+    const seg = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code = `GIFT-${seg()}-${seg()}-${seg()}`;
+    await sequelize.query(
+      `INSERT INTO gift_cards (code, initial_amount, balance, status, recipient_email, expires_at)
+       VALUES (?, ?, ?, 'active', ?, DATE_ADD(NOW(), INTERVAL 1 YEAR))`,
+      { replacements: [code, amount, amount, recipient_email], type: QueryTypes.INSERT }
+    );
+    if (recipient_email) {
+      sendEmail({ to: recipient_email, ...emailTemplates.giftCard({ code, amount, message: null }) }).catch(() => {});
+    }
+    res.status(201).json({ success: true, code, message: 'Gift card emessa' });
+  } catch (error) { next(error); }
+});
+
+router.patch('/gift-cards/:id/disable', isAdminOnly, async (req, res, next) => {
+  try {
+    await sequelize.query(
+      "UPDATE gift_cards SET status = 'disabled' WHERE id = ?",
+      { replacements: [req.params.id], type: QueryTypes.UPDATE }
+    );
+    res.json({ success: true, message: 'Gift card disabilitata' });
+  } catch (error) { next(error); }
+});
+
+// ─── EMAIL MARKETING ─────────────────────────────────────────────────────────
+
+router.get('/newsletter/subscribers', async (req, res, next) => {
+  try {
+    const subscribers = await sequelize.query(
+      'SELECT email, is_active, created_at FROM newsletter_subscribers ORDER BY created_at DESC',
+      { type: QueryTypes.SELECT }
+    );
+    const active = subscribers.filter(s => s.is_active).length;
+    res.json({ success: true, subscribers, total: subscribers.length, active });
+  } catch (error) { next(error); }
+});
+
+// Send a campaign to all active subscribers
+router.post('/newsletter/campaign', isAdminOnly, async (req, res, next) => {
+  try {
+    const subject = req.body.subject?.trim();
+    const heading = req.body.heading?.trim() || subject;
+    const bodyHtml = req.body.body?.trim();
+    const ctaText = req.body.cta_text?.trim() || null;
+    const ctaUrl = req.body.cta_url?.trim() || null;
+
+    if (!subject || !bodyHtml) {
+      return res.status(400).json({ success: false, message: 'Oggetto e contenuto obbligatori' });
+    }
+
+    const subscribers = await sequelize.query(
+      'SELECT email FROM newsletter_subscribers WHERE is_active = 1',
+      { type: QueryTypes.SELECT }
+    );
+    if (subscribers.length === 0) {
+      return res.status(400).json({ success: false, message: 'Nessun iscritto attivo' });
+    }
+
+    const tpl = emailTemplates.newsletterCampaign({ heading, body: bodyHtml, ctaText, ctaUrl });
+
+    // Fire-and-forget; report count
+    let sent = 0;
+    for (const sub of subscribers) {
+      const r = await sendEmail({ to: sub.email, subject, html: tpl.html });
+      if (r.success) sent++;
+    }
+
+    res.json({ success: true, message: `Campagna inviata a ${sent}/${subscribers.length} iscritti`, sent, total: subscribers.length });
+  } catch (error) { next(error); }
+});
+
+// ─── ANALYTICS ───────────────────────────────────────────────────────────────
+
+router.get('/analytics', isAdminOnly, async (req, res, next) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+
+    // Daily sales over the window
+    const dailySales = await sequelize.query(
+      `SELECT DATE(created_at) AS date, COALESCE(SUM(total_amount),0) AS revenue, COUNT(*) AS orders
+       FROM orders
+       WHERE payment_status = 'paid' AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+       GROUP BY DATE(created_at) ORDER BY date`,
+      { replacements: [days], type: QueryTypes.SELECT }
+    );
+
+    // Revenue by category
+    const byCategory = await sequelize.query(
+      `SELECT c.name AS category, COALESCE(SUM(oi.total_price),0) AS revenue, COUNT(DISTINCT o.id) AS orders
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id AND o.payment_status = 'paid'
+       JOIN products p ON p.id = oi.product_id
+       LEFT JOIN categories c ON c.id = p.category_id
+       GROUP BY c.id ORDER BY revenue DESC LIMIT 8`,
+      { type: QueryTypes.SELECT }
+    );
+
+    // Top products by revenue
+    const topProducts = await sequelize.query(
+      `SELECT p.id, p.name, p.image_url, SUM(oi.quantity) AS units, SUM(oi.total_price) AS revenue
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id AND o.payment_status = 'paid'
+       JOIN products p ON p.id = oi.product_id
+       GROUP BY p.id ORDER BY revenue DESC LIMIT 8`,
+      { type: QueryTypes.SELECT }
+    );
+
+    // Order status distribution
+    const statusDist = await sequelize.query(
+      `SELECT status, COUNT(*) count FROM orders GROUP BY status`,
+      { type: QueryTypes.SELECT }
+    );
+
+    // KPIs
+    const [kpi] = await sequelize.query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN payment_status='paid' THEN total_amount END),0) AS revenue,
+        COUNT(CASE WHEN payment_status='paid' THEN 1 END) AS paid_orders,
+        COALESCE(AVG(CASE WHEN payment_status='paid' THEN total_amount END),0) AS avg_order_value,
+        (SELECT COUNT(*) FROM users WHERE role='customer') AS customers,
+        (SELECT COUNT(*) FROM newsletter_subscribers WHERE is_active=1) AS subscribers
+       FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
+      { replacements: [days], type: QueryTypes.SELECT }
+    );
+
+    // New customers per day
+    const newCustomers = await sequelize.query(
+      `SELECT DATE(created_at) AS date, COUNT(*) AS count
+       FROM users WHERE role='customer' AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+       GROUP BY DATE(created_at) ORDER BY date`,
+      { replacements: [days], type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, days, dailySales, byCategory, topProducts, statusDist, kpi, newCustomers });
   } catch (error) { next(error); }
 });
 
