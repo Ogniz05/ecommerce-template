@@ -16,7 +16,14 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear both the raw token this file reads on each request AND the
+      // zustand-persisted auth blob (useStore's `ecommerce-auth` key) that
+      // drives isAuthenticated across the app. Removing only the former left
+      // stale/expired sessions "authenticated" after reload, so PublicOnly
+      // guards (e.g. on /auth/login) bounced straight back to /profile
+      // instead of letting the user log in again.
       localStorage.removeItem('token');
+      localStorage.removeItem('ecommerce-auth');
       window.location.href = '/auth/login';
     }
     return Promise.reject(error.response?.data || { message: 'Errore di rete' });
