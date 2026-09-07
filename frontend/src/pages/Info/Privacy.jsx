@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { resetConsent, hasDecided } from '../../utils/consent';
 
 const SECTIONS = [
   {
@@ -74,6 +75,21 @@ export default function Privacy() {
                 <p className="text-text-secondary leading-relaxed">{section.content}</p>
               </motion.div>
             ))}
+
+            {/* Consent has to be as easy to withdraw as it was to give, so the
+                control lives in the policy itself rather than only in a banner
+                that never reappears once dismissed. */}
+            <div className="border border-line rounded-md p-5 bg-sunken">
+              <h2 className="font-heading font-bold text-dark text-lg mb-2">Le tue preferenze cookie</h2>
+              <p className="text-text-secondary text-sm leading-relaxed mb-4">
+                {hasDecided()
+                  ? 'Hai già espresso una scelta. Puoi revocarla o modificarla in qualsiasi momento.'
+                  : 'Non hai ancora espresso una scelta: al momento sono attivi solo i cookie necessari.'}
+              </p>
+              <button onClick={resetConsent} className="btn btn-outline btn-sm px-5">
+                Modifica preferenze cookie
+              </button>
+            </div>
           </motion.div>
         </div>
       </section>

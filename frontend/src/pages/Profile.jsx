@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
   FiUser, FiPackage, FiHeart, FiMapPin, FiShield, FiEdit2, FiSave,
   FiX, FiChevronRight, FiCamera, FiMail, FiLock, FiEye, FiEyeOff,
-  FiBell, FiLogOut, FiCheck, FiPlus, FiTrash2, FiAlertCircle, FiAward, FiArrowUp, FiArrowDown
+  FiBell, FiLogOut, FiCheck, FiPlus, FiTrash2, FiAlertCircle, FiAward, FiArrowUp, FiArrowDown,
+  FiDownload
 } from 'react-icons/fi';
 import { useAuthStore, useWishlistStore } from '../store/useStore';
 import EmptyState from '../components/UI/EmptyState';
@@ -541,21 +542,201 @@ function SecurityTab() {
         </form>
       </div>
 
-      {/* Danger zone */}
+      <PrivacyZone />
+    </div>
+  );
+}
+
+/**
+ * The two rights that need a button rather than a paragraph: access/portability
+ * (Art. 15/20) and erasure (Art. 17).
+ *
+ * The old "Elimina Account" here was a stub that raised a toast telling people
+ * to contact support, under copy promising that orders would be deleted too.
+ * They are not: invoices are retained under a legal obligation, so what
+ * actually happens is erasure of the person with the accounting record left
+ * behind. The dialog now says which of the two outcomes applies to this
+ * account before anything is confirmed.
+ */
+function PrivacyZone() {
+  const { user, logout } = useAuthStore();
+  const [summary, setSummary] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    api.get('/users/account/summary').then(setSummary).catch(() => setSummary(null));
+  }, [open]);
+
+  const exportData = async () => {
+    setExporting(true);
+    try {
+      // Fetched with the auth header rather than linked, then handed over as a
+      // blob — a plain <a href> would hit the endpoint unauthenticated.
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/users/account/export`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (!res.ok) throw new Error('Export non riuscito');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dati-account-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Download avviato');
+    } catch (err) {
+      toast.error(err.message || 'Export non riuscito');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setBusy(true);
+    try {
+      const res = await api.delete('/users/account', {
+        data: { confirm: confirmText.trim(), password }
+      });
+      toast.success(res.message || 'Account eliminato');
+      logout();
+      window.location.href = '/';
+    } catch (err) {
+      toast.error(err.message || 'Eliminazione non riuscita');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const anonymizing = summary?.mode === 'anonymized';
+
+  return (
+    <>
+      <div className="rounded-2xl border border-white/8 bg-white/3 p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center">
+            <FiDownload size={15} className="text-brand" />
+          </div>
+          <div>
+            <h3 className="font-heading font-semibold text-white text-sm">Scarica i tuoi dati</h3>
+            <p className="text-white/35 text-xs">Account, ordini, indirizzi, recensioni e punti in formato JSON.</p>
+          </div>
+        </div>
+        <button
+          onClick={exportData}
+          disabled={exporting}
+          className="w-full bg-white/8 text-white font-heading font-semibold py-3 rounded-xl text-sm hover:bg-white/12 transition-colors border border-white/10 disabled:opacity-50"
+        >
+          {exporting ? 'Preparo il file…' : 'Esporta i miei dati'}
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-red-500/15 bg-red-500/5 p-6">
         <div className="flex items-center gap-3 mb-3">
           <FiAlertCircle size={16} className="text-red-400" />
-          <h3 className="font-heading font-semibold text-red-400 text-sm">Zona Pericolosa</h3>
+          <h3 className="font-heading font-semibold text-red-400 text-sm">Elimina account</h3>
         </div>
-        <p className="text-white/40 text-xs mb-4 leading-relaxed">L'eliminazione dell'account è permanente. Tutti i dati, ordini e preferenze verranno cancellati.</p>
+        <p className="text-white/40 text-xs mb-4 leading-relaxed">
+          Rimuove i tuoi dati personali, indirizzi, wishlist e iscrizione alla newsletter.
+          Gli ordini già effettuati restano registrati in forma anonima: siamo obbligati
+          a conservare le fatture.
+        </p>
         <button
-          onClick={() => toast.error('Funzione disponibile contattando il supporto')}
+          onClick={() => { setOpen(true); setConfirmText(''); setPassword(''); }}
           className="text-red-400 text-xs font-heading border border-red-500/20 px-4 py-2 rounded-lg hover:bg-red-500/10 transition-colors"
         >
           Elimina Account
         </button>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4"
+            onClick={() => !busy && setOpen(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-account-title"
+              initial={{ scale: 0.97, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.97, y: 8 }}
+              transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-[#17171B] p-6"
+            >
+              <h3 id="delete-account-title" className="font-heading font-semibold text-white text-base">
+                Eliminare l&apos;account?
+              </h3>
+
+              {summary === null ? (
+                <p className="text-white/40 text-sm mt-3">Verifico il tuo account…</p>
+              ) : summary.lastAdmin ? (
+                <p className="text-white/60 text-sm mt-3 leading-relaxed">
+                  Sei l&apos;ultimo amministratore attivo. Nomina un altro admin prima di
+                  eliminare questo account, altrimenti il pannello resterebbe inaccessibile.
+                </p>
+              ) : (
+                <p className="text-white/50 text-sm mt-3 leading-relaxed">
+                  {anonymizing
+                    ? `Hai ${summary.orderCount} ${summary.orderCount === 1 ? 'ordine' : 'ordini'}. I dati personali vengono rimossi, gli ordini restano in forma anonima per obblighi fiscali.`
+                    : 'Non hai ordini: l’account viene eliminato definitivamente.'}
+                  {' '}L&apos;operazione non è reversibile.
+                </p>
+              )}
+
+              {summary && !summary.lastAdmin && (
+                <div className="space-y-3 mt-5">
+                  {!user?.google_id && (
+                    <div>
+                      <label className={labelClass}>Conferma con la password</label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className={inputClass}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className={labelClass}>Scrivi ELIMINA per confermare</label>
+                    <input
+                      value={confirmText}
+                      onChange={e => setConfirmText(e.target.value)}
+                      className={inputClass}
+                      placeholder="ELIMINA"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2.5 mt-6">
+                <button
+                  onClick={() => setOpen(false)}
+                  disabled={busy}
+                  className="flex-1 bg-white/8 text-white font-heading font-semibold py-2.5 rounded-xl text-sm hover:bg-white/12 transition-colors border border-white/10"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={busy || !summary || summary.lastAdmin || confirmText.trim() !== 'ELIMINA'}
+                  className="flex-1 bg-red-500/90 text-white font-heading font-semibold py-2.5 rounded-xl text-sm hover:bg-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {busy ? 'Elimino…' : 'Elimina definitivamente'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

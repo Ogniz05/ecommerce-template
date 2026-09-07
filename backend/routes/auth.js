@@ -9,9 +9,20 @@ const { QueryTypes } = require('sequelize');
 const { sendEmail, emailTemplates } = require('../config/email');
 const { authenticate } = require('../middleware/auth');
 const passport = require('../config/passport');
+const rateLimit = require('express-rate-limit');
 
 const generateToken = (id, role) =>
   jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
+
+// Tighter than the global /api limiter because this endpoint sends mail: the
+// global allowance of 100 requests per window is 100 emails.
+const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Troppe richieste. Riprova tra qualche minuto.' }
+});
 
 // POST /api/auth/register
 router.post('/register', [
@@ -216,6 +227,41 @@ router.get('/verify-email', async (req, res, next) => {
     );
 
     res.json({ success: true, message: 'Email verificata con successo!' });
+  } catch (error) { next(error); }
+});
+
+// POST /api/auth/resend-verification
+// Registration sent one verification email and offered no way to ask for
+// another, so a customer who lost it or mistyped nothing could never verify.
+router.post('/resend-verification', resendVerificationLimiter, authenticate, async (req, res, next) => {
+  try {
+    const [user] = await sequelize.query(
+      'SELECT id, email, first_name, is_verified, email_verify_token FROM users WHERE id = ?',
+      { replacements: [req.user.id], type: QueryTypes.SELECT }
+    );
+
+    if (!user) return res.status(404).json({ success: false, message: 'Utente non trovato' });
+    if (user.is_verified) {
+      return res.json({ success: true, alreadyVerified: true, message: 'Email già verificata' });
+    }
+
+    // Reissue rather than resend: a token that leaked in an old inbox should
+    // stop working once a new one is requested.
+    const verifyToken = uuidv4();
+    await sequelize.query(
+      'UPDATE users SET email_verify_token = ? WHERE id = ?',
+      { replacements: [verifyToken, user.id], type: QueryTypes.UPDATE }
+    );
+
+    await sendEmail({
+      to: user.email,
+      ...emailTemplates.emailVerification(
+        { first_name: user.first_name },
+        `${process.env.CLIENT_URL}/auth/verify-email?token=${verifyToken}`
+      )
+    });
+
+    res.json({ success: true, message: 'Email di verifica inviata. Controlla la posta.' });
   } catch (error) { next(error); }
 });
 

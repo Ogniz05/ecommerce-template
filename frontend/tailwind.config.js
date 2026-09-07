@@ -18,6 +18,13 @@ export default {
         'line-strong': '#D2D2D9',
         sunken: '#F6F6F7',
 
+        // `surface` was referenced across the auth pages, GiftCards and the
+        // shared UI primitives but never declared here, so every `bg-surface`
+        // silently produced no background at all — cards rendered transparent
+        // over whatever sat behind them. Mirrors --surface / --surface-inverse.
+        surface: '#FFFFFF',
+        'surface-inverse': '#17171B',
+
         // [CUSTOMIZE] Brand accent. Kept as a single hue on purpose — the 400/600
         // steps exist for hover and tint, not for building gradients out of.
         brand: {

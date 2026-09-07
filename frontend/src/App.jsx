@@ -8,6 +8,8 @@ import PageLoader from './components/UI/PageLoader';
 import ScrollToTop from './components/UI/ScrollToTop';
 import ErrorBoundary from './components/UI/ErrorBoundary';
 import OfflineBanner from './components/UI/OfflineBanner';
+import CookieConsent from './components/UI/CookieConsent';
+import VerificationBanner from './components/UI/VerificationBanner';
 import { useAuthStore } from './store/useStore';
 
 // Lazy-loaded pages for code splitting
@@ -57,7 +59,12 @@ const PublicOnly = ({ children }) => {
 const MainLayout = ({ children }) => (
   <div className="flex flex-col min-h-screen">
     <Header />
-    <main className="flex-1 pt-16">{children}</main>
+    {/* Sits under the fixed header, above the page, so it is the first thing
+        read after the nav rather than buried inside a settings screen. */}
+    <div className="pt-16">
+      <VerificationBanner />
+    </div>
+    <main className="flex-1">{children}</main>
     <Footer />
     <CartSidebar />
   </div>
@@ -85,6 +92,7 @@ export default function App() {
     <>
       <ScrollToTop />
       <OfflineBanner />
+      <CookieConsent />
       <Toaster
         position="bottom-center"
         toastOptions={{

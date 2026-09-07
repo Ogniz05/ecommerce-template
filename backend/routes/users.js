@@ -5,6 +5,9 @@ const { body, validationResult } = require('express-validator');
 const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
 const { authenticate } = require('../middleware/auth');
+const {
+  deleteAccount, exportAccountData, summarizeAccount, isLastAdmin
+} = require('../services/accountDeletion');
 
 router.use(authenticate);
 
@@ -176,6 +179,84 @@ router.get('/wishlist', async (req, res, next) => {
       { replacements: [req.user.id], type: QueryTypes.SELECT }
     );
     res.json({ success: true, wishlist });
+  } catch (error) { next(error); }
+});
+
+// GET /api/users/account/summary
+// What deleting would actually do, so the confirmation dialog can say whether
+// the account will be erased outright or anonymized with orders retained.
+router.get('/account/summary', async (req, res, next) => {
+  try {
+    const { orderCount } = await summarizeAccount(req.user.id);
+    res.json({
+      success: true,
+      orderCount,
+      mode: orderCount === 0 ? 'deleted' : 'anonymized',
+      lastAdmin: await isLastAdmin(req.user.id)
+    });
+  } catch (error) { next(error); }
+});
+
+// GET /api/users/account/export — GDPR Art. 15 / Art. 20
+router.get('/account/export', async (req, res, next) => {
+  try {
+    const data = await exportAccountData(req.user.id);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="dati-account-${req.user.id}-${Date.now()}.json"`);
+    // Not res.json(): that would go through the response shape the rest of the
+    // API uses, and a portability export should be the data itself.
+    res.send(JSON.stringify(data, null, 2));
+  } catch (error) { next(error); }
+});
+
+// DELETE /api/users/account — GDPR Art. 17
+router.delete('/account', async (req, res, next) => {
+  try {
+    const { password, confirm } = req.body;
+
+    // Deliberately not a single click. Erasure is irreversible and, for a
+    // customer with orders, partly irreversible even for us.
+    if (confirm !== 'ELIMINA') {
+      return res.status(400).json({
+        success: false,
+        message: 'Conferma mancante: scrivi ELIMINA per procedere.'
+      });
+    }
+
+    if (await isLastAdmin(req.user.id)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Sei l\'ultimo amministratore attivo. Nomina un altro admin prima di eliminare l\'account.'
+      });
+    }
+
+    const [account] = await sequelize.query(
+      'SELECT password, google_id FROM users WHERE id = ?',
+      { replacements: [req.user.id], type: QueryTypes.SELECT }
+    );
+
+    // An account created through Google has no password to check; requiring
+    // one would make it impossible to delete.
+    if (!account?.google_id) {
+      if (!password) {
+        return res.status(400).json({ success: false, message: 'Password richiesta' });
+      }
+      const ok = await bcrypt.compare(password, account.password || '');
+      if (!ok) {
+        return res.status(401).json({ success: false, message: 'Password non corretta' });
+      }
+    }
+
+    const result = await deleteAccount(req.user.id);
+
+    res.json({
+      success: true,
+      mode: result.mode,
+      message: result.mode === 'deleted'
+        ? 'Account eliminato definitivamente.'
+        : 'Dati personali rimossi. Gli ordini restano registrati in forma anonima per obblighi fiscali.'
+    });
   } catch (error) { next(error); }
 });
 
