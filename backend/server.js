@@ -117,6 +117,9 @@ async function startServer() {
       console.log('✅ Modelli sincronizzati');
     }
 
+    // Gives back inventory held by checkouts that were never paid.
+    require('./services/abandonedOrders').startAbandonedOrderSweep();
+
     app.listen(PORT, () => {
       console.log(`\n🚀 Server avviato su http://localhost:${PORT}`);
       console.log(`📊 Admin API: http://localhost:${PORT}/api/admin`);

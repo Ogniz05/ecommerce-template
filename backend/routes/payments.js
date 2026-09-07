@@ -1,26 +1,56 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const stripe = require('../config/stripe');
 const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
-const { authenticate } = require('../middleware/auth');
+const { optionalAuth } = require('../middleware/auth');
+const { finalizeOrderPayment } = require('../services/orderPayment');
+
+/**
+ * Resolves the order a payment call refers to, for both kinds of buyer.
+ *
+ * A signed-in customer is matched on user_id. A guest has no session at all —
+ * guest checkout creates a shadow account it never hands out credentials for —
+ * and instead presents the payment_token returned by POST /orders. Requiring a
+ * login here is what previously made guest checkout impossible to pay for.
+ *
+ * Returns null when nothing matches, so callers answer 404 either way and the
+ * endpoint never reveals whether a given order id exists.
+ */
+async function resolvePayableOrder({ orderId, user, paymentToken, requirePending = true }) {
+  if (!orderId) return null;
+
+  const [order] = await sequelize.query(
+    'SELECT * FROM orders WHERE id = ?',
+    { replacements: [orderId], type: QueryTypes.SELECT }
+  );
+  if (!order) return null;
+  if (requirePending && order.payment_status !== 'pending') return null;
+
+  if (user && order.user_id === user.id) return order;
+
+  if (paymentToken && order.payment_token) {
+    const a = Buffer.from(String(paymentToken), 'utf8');
+    const b = Buffer.from(String(order.payment_token), 'utf8');
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) return order;
+  }
+
+  return null;
+}
 
 // POST /api/payments/stripe/create-intent
-router.post('/stripe/create-intent', authenticate, async (req, res, next) => {
+router.post('/stripe/create-intent', optionalAuth, async (req, res, next) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, paymentToken } = req.body;
 
-    const [order] = await sequelize.query(
-      'SELECT * FROM orders WHERE id = ? AND user_id = ? AND payment_status = "pending"',
-      { replacements: [orderId, req.user.id], type: QueryTypes.SELECT }
-    );
-
+    const order = await resolvePayableOrder({ orderId, user: req.user, paymentToken });
     if (!order) return res.status(404).json({ success: false, message: 'Ordine non trovato' });
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(parseFloat(order.total_amount) * 100),
       currency: 'eur',
-      metadata: { orderId: order.id.toString(), orderNumber: order.order_number, userId: req.user.id.toString() },
+      metadata: { orderId: order.id.toString(), orderNumber: order.order_number, userId: String(order.user_id) },
       automatic_payment_methods: { enabled: true }
     });
 
@@ -34,45 +64,39 @@ router.post('/stripe/create-intent', authenticate, async (req, res, next) => {
 });
 
 // POST /api/payments/stripe/confirm
-router.post('/stripe/confirm', authenticate, async (req, res, next) => {
+router.post('/stripe/confirm', optionalAuth, async (req, res, next) => {
   try {
-    const { paymentIntentId, orderId } = req.body;
+    const { paymentIntentId, orderId, paymentToken } = req.body;
+
+    // An order already finalized by the webhook is no longer "pending", so
+    // ownership is checked without that requirement and the duplicate is
+    // reported as success — the customer did pay.
+    const order = await resolvePayableOrder({ orderId, user: req.user, paymentToken, requirePending: false });
+    if (!order) return res.status(404).json({ success: false, message: 'Ordine non trovato' });
 
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    if (paymentIntent.status === 'succeeded') {
-      await sequelize.query(
-        'UPDATE orders SET payment_status = "paid", status = "processing", payment_method = "stripe" WHERE id = ? AND user_id = ?',
-        { replacements: [orderId, req.user.id], type: QueryTypes.UPDATE }
-      );
-
-      // Decrement actual inventory
-      const items = await sequelize.query(
-        'SELECT * FROM order_items WHERE order_id = ?',
-        { replacements: [orderId], type: QueryTypes.SELECT }
-      );
-
-      for (const item of items) {
-        await sequelize.query(
-          `UPDATE inventory SET quantity = quantity - ?, reserved = reserved - ?
-           WHERE product_id = ? AND ${item.variant_id ? 'variant_id = ?' : 'variant_id IS NULL'}`,
-          { replacements: item.variant_id
-            ? [item.quantity, item.quantity, item.product_id, item.variant_id]
-            : [item.quantity, item.quantity, item.product_id],
-            type: QueryTypes.UPDATE
-          }
-        );
-
-        await sequelize.query(
-          'UPDATE products SET total_sold = total_sold + ? WHERE id = ?',
-          { replacements: [item.quantity, item.product_id], type: QueryTypes.UPDATE }
-        );
-      }
-
-      res.json({ success: true, message: 'Pagamento confermato!' });
-    } else {
-      res.status(400).json({ success: false, message: `Pagamento non riuscito: ${paymentIntent.status}` });
+    // Trusting the client's orderId alone would let anyone mark any order paid
+    // by pointing at someone else's succeeded intent.
+    if (paymentIntent.metadata?.orderId !== String(order.id)) {
+      return res.status(400).json({ success: false, message: 'Pagamento non corrispondente all\'ordine' });
     }
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ success: false, message: `Pagamento non riuscito: ${paymentIntent.status}` });
+    }
+
+    const result = await finalizeOrderPayment({
+      orderId: order.id,
+      method: 'stripe',
+      transactionRef: paymentIntent.id
+    });
+
+    res.json({
+      success: true,
+      message: 'Pagamento confermato!',
+      alreadyFinalized: result.alreadyFinalized
+    });
   } catch (error) { next(error); }
 });
 
@@ -88,14 +112,20 @@ const stripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // This is the path that runs when the customer closes the tab after paying,
+  // so it has to do the full job — flipping payment_status alone left the
+  // stock reserved forever and never decremented it.
   if (event.type === 'payment_intent.succeeded') {
     const pi = event.data.object;
     const orderId = pi.metadata?.orderId;
     if (orderId) {
-      await sequelize.query(
-        'UPDATE orders SET payment_status = "paid", status = "processing" WHERE id = ? AND payment_status = "pending"',
-        { replacements: [orderId], type: QueryTypes.UPDATE }
-      );
+      try {
+        await finalizeOrderPayment({ orderId, method: 'stripe', transactionRef: pi.id });
+      } catch (err) {
+        // Answering non-2xx makes Stripe redeliver, which is what we want.
+        console.error(`Webhook: finalize failed for order ${orderId}:`, err.message);
+        return res.status(500).json({ received: false });
+      }
     }
   }
 
@@ -103,13 +133,10 @@ const stripeWebhook = async (req, res) => {
 };
 
 // POST /api/payments/paypal/create-order
-router.post('/paypal/create-order', authenticate, async (req, res, next) => {
+router.post('/paypal/create-order', optionalAuth, async (req, res, next) => {
   try {
-    const { orderId } = req.body;
-    const [order] = await sequelize.query(
-      'SELECT * FROM orders WHERE id = ? AND user_id = ?',
-      { replacements: [orderId, req.user.id], type: QueryTypes.SELECT }
-    );
+    const { orderId, paymentToken } = req.body;
+    const order = await resolvePayableOrder({ orderId, user: req.user, paymentToken });
     if (!order) return res.status(404).json({ success: false, message: 'Ordine non trovato' });
 
     // PayPal order creation via REST API
@@ -139,9 +166,18 @@ router.post('/paypal/create-order', authenticate, async (req, res, next) => {
 });
 
 // POST /api/payments/paypal/capture
-router.post('/paypal/capture', authenticate, async (req, res, next) => {
+router.post('/paypal/capture', optionalAuth, async (req, res, next) => {
   try {
-    const { paypalOrderId, orderId } = req.body;
+    const { paypalOrderId, orderId, paymentToken } = req.body;
+
+    const order = await resolvePayableOrder({ orderId, user: req.user, paymentToken, requirePending: false });
+    if (!order) return res.status(404).json({ success: false, message: 'Ordine non trovato' });
+
+    // The capture must belong to this order, not merely be some completed one.
+    if (order.paypal_order_id && order.paypal_order_id !== paypalOrderId) {
+      return res.status(400).json({ success: false, message: 'Pagamento non corrispondente all\'ordine' });
+    }
+
     const accessToken = await getPayPalAccessToken();
 
     const capture = await fetch(`${getPayPalBaseUrl()}/v2/checkout/orders/${paypalOrderId}/capture`, {
@@ -152,15 +188,23 @@ router.post('/paypal/capture', authenticate, async (req, res, next) => {
       }
     }).then(r => r.json());
 
-    if (capture.status === 'COMPLETED') {
-      await sequelize.query(
-        'UPDATE orders SET payment_status = "paid", status = "processing", payment_method = "paypal" WHERE id = ? AND user_id = ?',
-        { replacements: [orderId, req.user.id], type: QueryTypes.UPDATE }
-      );
-      res.json({ success: true, message: 'Pagamento PayPal confermato!' });
-    } else {
-      res.status(400).json({ success: false, message: 'Pagamento PayPal non riuscito' });
+    if (capture.status !== 'COMPLETED') {
+      return res.status(400).json({ success: false, message: 'Pagamento PayPal non riuscito' });
     }
+
+    // Same finalizer as Stripe: PayPal used to mark the order paid and skip
+    // inventory entirely.
+    const result = await finalizeOrderPayment({
+      orderId: order.id,
+      method: 'paypal',
+      transactionRef: paypalOrderId
+    });
+
+    res.json({
+      success: true,
+      message: 'Pagamento PayPal confermato!',
+      alreadyFinalized: result.alreadyFinalized
+    });
   } catch (error) { next(error); }
 });
 

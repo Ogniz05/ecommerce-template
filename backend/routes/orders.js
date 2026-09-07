@@ -6,6 +6,7 @@ const { authenticate, optionalAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { sendEmail, emailTemplates } = require('../config/email');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 const PDFDocument = require('pdfkit');
 const { REDEEM_RATE, MIN_REDEEM, POINTS_PER_EURO } = require('./loyalty').config;
 
@@ -86,6 +87,7 @@ router.post('/', optionalAuth, async (req, res, next) => {
     if (!req.user) {
       const guestEmail = shipping_address?.email?.trim().toLowerCase();
       if (!guestEmail) {
+        await transaction.rollback();
         return res.status(400).json({ success: false, message: 'Email obbligatoria per il checkout ospite' });
       }
       let [existingUser] = await sequelize.query(
@@ -95,13 +97,18 @@ router.post('/', optionalAuth, async (req, res, next) => {
       if (existingUser) {
         req.user = existingUser;
       } else {
+        // Column is `password`, not `password_hash` — the latter made every
+        // first-time guest checkout fail with "Unknown column 'password_hash'".
+        // The insert joins the order transaction so a later failure does not
+        // leave an orphaned account behind for an order that never existed.
         const tempHash = await bcrypt.hash(Math.random().toString(36), 10);
         const [newUserId] = await sequelize.query(
-          `INSERT INTO users (email, first_name, last_name, password_hash, is_verified, is_active)
+          `INSERT INTO users (email, first_name, last_name, password, is_verified, is_active)
            VALUES (?, ?, ?, ?, 0, 1)`,
           {
             replacements: [guestEmail, shipping_address.first_name || 'Ospite', shipping_address.last_name || '', tempHash],
-            type: QueryTypes.INSERT
+            type: QueryTypes.INSERT,
+            transaction
           }
         );
         req.user = { id: newUserId, email: guestEmail, first_name: shipping_address.first_name || 'Ospite', last_name: shipping_address.last_name || '', role: 'customer' };
@@ -109,6 +116,7 @@ router.post('/', optionalAuth, async (req, res, next) => {
     }
 
     if (!items || items.length === 0) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, message: 'Carrello vuoto' });
     }
 
@@ -234,19 +242,23 @@ router.post('/', optionalAuth, async (req, res, next) => {
     const pointsEarned = Math.floor(totalAmount * POINTS_PER_EURO);
 
     const orderNumber = generateOrderNumber();
+    // Handed back once, in this response only. A guest has no account session,
+    // so this is what proves to the payment endpoints that the caller owns
+    // this order.
+    const paymentToken = uuidv4();
 
     const [orderResult] = await sequelize.query(
       `INSERT INTO orders (user_id, order_number, status, subtotal, discount_amount, shipping_cost, tax_amount,
         total_amount, coupon_id, coupon_code, shipping_address, billing_address, shipping_method, payment_status,
-        points_earned, points_redeemed, gift_card_code, gift_card_amount)
-       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+        payment_token, points_earned, points_redeemed, gift_card_code, gift_card_amount)
+       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
       {
         replacements: [
           req.user.id, orderNumber, subtotal, discount, shippingCost, taxAmount, totalAmount,
           coupon ? coupon.id : null, coupon_code || null,
           JSON.stringify(shipping_address), JSON.stringify(billing_address || shipping_address),
           shippingData?.name || 'Standard',
-          pointsEarned, pointsRedeemed, giftCardCode, giftCardAmount
+          paymentToken, pointsEarned, pointsRedeemed, giftCardCode, giftCardAmount
         ],
         type: QueryTypes.INSERT,
         transaction
@@ -301,18 +313,10 @@ router.post('/', optionalAuth, async (req, res, next) => {
       );
     }
 
-    // ── Earn loyalty points ──
-    if (pointsEarned > 0) {
-      await sequelize.query(
-        'UPDATE users SET loyalty_points = loyalty_points + ? WHERE id = ?',
-        { replacements: [pointsEarned, req.user.id], type: QueryTypes.UPDATE, transaction }
-      );
-      await sequelize.query(
-        `INSERT INTO loyalty_transactions (user_id, order_id, points, type, description)
-         VALUES (?, ?, ?, 'earn', ?)`,
-        { replacements: [req.user.id, orderId, pointsEarned, `Punti da ordine ${orderNumber}`], type: QueryTypes.INSERT, transaction }
-      );
-    }
+    // Points are NOT granted here. `points_earned` is stored on the order as
+    // what the customer will earn, and finalizeOrderPayment() credits it once
+    // the money actually arrives — otherwise abandoning a checkout minted
+    // spendable points, and repeating that turned into free discounts.
 
     await transaction.commit();
 
@@ -324,6 +328,7 @@ router.post('/', optionalAuth, async (req, res, next) => {
       orderId,
       orderNumber,
       totalAmount,
+      paymentToken,
       pointsEarned,
       pointsRedeemed,
       giftCardAmount,

@@ -150,7 +150,9 @@ function ShippingStep({ subtotal, selected, onSelect, onNext, onBack }) {
   );
 }
 
-function StripePaymentForm({ orderId, totalAmount, onSuccess, onBack }) {
+// `paymentToken` comes back from POST /orders and is how a guest — who has no
+// account session — proves ownership of the order being paid.
+function StripePaymentForm({ orderId, paymentToken, totalAmount, onSuccess, onBack }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -160,14 +162,22 @@ function StripePaymentForm({ orderId, totalAmount, onSuccess, onBack }) {
     if (!stripe || !elements) return;
     setLoading(true);
     try {
-      const { clientSecret } = await api.post('/payments/stripe/create-intent', { orderId });
+      const { clientSecret } = await api.post('/payments/stripe/create-intent', { orderId, paymentToken });
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: elements.getElement(CardElement) }
       });
 
       if (error) throw new Error(error.message);
       if (paymentIntent.status === 'succeeded') {
-        await api.post('/payments/stripe/confirm', { paymentIntentId: paymentIntent.id, orderId });
+        // The card is already charged at this point. A failure here means only
+        // that our bookkeeping call did not land — the Stripe webhook finalizes
+        // the same order server-side — so the customer is sent to the success
+        // page rather than being told the payment failed.
+        try {
+          await api.post('/payments/stripe/confirm', { paymentIntentId: paymentIntent.id, orderId, paymentToken });
+        } catch (confirmErr) {
+          console.error('Order confirm call failed; webhook will finalize', confirmErr);
+        }
         onSuccess();
       }
     } catch (err) {
@@ -200,7 +210,7 @@ function StripePaymentForm({ orderId, totalAmount, onSuccess, onBack }) {
   );
 }
 
-function PaymentStep({ orderId, totalAmount, onSuccess, onBack }) {
+function PaymentStep({ orderId, paymentToken, totalAmount, onSuccess, onBack }) {
   const { t } = useTranslation();
   const [method, setMethod] = useState('stripe');
 
@@ -221,7 +231,7 @@ function PaymentStep({ orderId, totalAmount, onSuccess, onBack }) {
       </div>
       <Elements stripe={stripePromise}>
         {method === 'stripe' ? (
-          <StripePaymentForm orderId={orderId} totalAmount={totalAmount} onSuccess={onSuccess} onBack={onBack} />
+          <StripePaymentForm orderId={orderId} paymentToken={paymentToken} totalAmount={totalAmount} onSuccess={onSuccess} onBack={onBack} />
         ) : (
           <div className="space-y-4">
             <p className="text-muted text-sm">Sarai reindirizzato su PayPal per completare il pagamento.</p>
@@ -298,6 +308,7 @@ export default function Checkout() {
   });
   const [shippingMethod, setShippingMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
+  const [paymentToken, setPaymentToken] = useState(null);
   const [orderNumber, setOrderNumber] = useState(null);
   const [creatingOrder, setCreatingOrder] = useState(false);
 
@@ -348,6 +359,7 @@ export default function Checkout() {
       });
 
       setOrderId(data.orderId);
+      setPaymentToken(data.paymentToken);
       setOrderNumber(data.orderNumber);
       setStep(2);
     } catch (err) {
@@ -435,6 +447,7 @@ export default function Checkout() {
                   <PaymentStep
                     key="pay"
                     orderId={orderId}
+                    paymentToken={paymentToken}
                     totalAmount={total}
                     onSuccess={handlePaymentSuccess}
                     onBack={() => setStep(1)}
