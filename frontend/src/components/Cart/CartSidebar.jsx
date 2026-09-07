@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { FiX, FiShoppingBag, FiMinus, FiPlus, FiTrash2, FiArrowRight, FiTruck, FiGift } from 'react-icons/fi';
 import { useCartStore, selectSubtotal, selectTotalItems } from '../../store/useStore';
 import { formatPrice } from '../../utils/formatters';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { drawerVariants, backdropVariants } from '../../utils/animations';
 
 const FREE_SHIPPING_THRESHOLD = 50;
@@ -14,6 +15,12 @@ export default function CartSidebar() {
   const { items, isOpen, setOpen, removeItem, updateQuantity } = useCartStore();
   const subtotal = useCartStore(selectSubtotal);
   const totalItems = useCartStore(selectTotalItems);
+
+  // The drawer covers the page but used to leave focus behind it: Tab walked
+  // through the catalogue underneath, Escape did nothing, and closing dropped
+  // focus to the top of the document.
+  const close = useCallback(() => setOpen(false), [setOpen]);
+  const drawerRef = useFocusTrap(isOpen, close);
 
   const shippingProgress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const amountLeft = Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0);
@@ -30,11 +37,17 @@ export default function CartSidebar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            onClick={() => setOpen(false)}
+            onClick={close}
+            aria-hidden="true"
           />
 
           {/* Drawer */}
           <motion.div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('cart.title')}
+            tabIndex={-1}
             className="fixed top-0 right-0 bottom-0 w-full max-w-[420px] bg-white z-50 flex flex-col"
             style={{ boxShadow: '-8px 0 40px rgba(0,0,0,0.18)' }}
             variants={drawerVariants}
@@ -55,10 +68,11 @@ export default function CartSidebar() {
                   </div>
                 </div>
                 <motion.button
-                  onClick={() => setOpen(false)}
+                  onClick={close}
+                  aria-label={t('common.close', 'Chiudi carrello')}
                   className="w-9 h-9 rounded-xl bg-sunken hover:bg-line flex items-center justify-center text-ink transition-colors"
                 >
-                  <FiX size={18} />
+                  <FiX size={18} aria-hidden="true" />
                 </motion.button>
               </div>
 
@@ -151,9 +165,10 @@ export default function CartSidebar() {
                               </Link>
                               <motion.button
                                 onClick={() => removeItem(item.id)}
+                                aria-label={`Rimuovi ${item.product_name} dal carrello`}
                                 className="w-6 h-6 rounded-lg bg-transparent hover:bg-red-100 text-faint hover:text-red-500 flex items-center justify-center transition-all flex-shrink-0"
                               >
-                                <FiX size={13} />
+                                <FiX size={13} aria-hidden="true" />
                               </motion.button>
                             </div>
 
@@ -169,12 +184,15 @@ export default function CartSidebar() {
                                 <motion.button
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
+                                  aria-label={`Diminuisci quantità di ${item.product_name}`}
                                   className="w-6 h-6 rounded-lg hover:bg-sunken disabled:opacity-30 flex items-center justify-center transition-all text-ink"
                                 >
-                                  <FiMinus size={11} />
+                                  <FiMinus size={11} aria-hidden="true" />
                                 </motion.button>
                                 <motion.span
                                   key={item.quantity}
+                                  aria-live="polite"
+                                  aria-label={`Quantità: ${item.quantity}`}
                                   className="w-6 text-center font-heading font-bold text-ink text-xs"
                                   initial={{ scale: 0.7 }}
                                   animate={{ scale: 1 }}
@@ -185,9 +203,10 @@ export default function CartSidebar() {
                                 <motion.button
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                   disabled={item.quantity >= (item.stock || 99)}
+                                  aria-label={`Aumenta quantità di ${item.product_name}`}
                                   className="w-6 h-6 rounded-lg hover:bg-sunken disabled:opacity-30 flex items-center justify-center transition-all text-ink"
                                 >
-                                  <FiPlus size={11} />
+                                  <FiPlus size={11} aria-hidden="true" />
                                 </motion.button>
                               </div>
 

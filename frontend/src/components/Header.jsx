@@ -137,14 +137,31 @@ export default function Header() {
               </Link>
             )}
 
-            <button className={iconBtn} onClick={() => setOpen(true)} aria-label={t('nav.cart')}>
-              <FiShoppingCart size={18} />
+            {/* The count is in the button's own label so it is read on focus:
+                a bare "Carrello" gave no hint that anything was in it. */}
+            <button
+              className={iconBtn}
+              onClick={() => setOpen(true)}
+              aria-label={totalItems > 0
+                ? `${t('nav.cart')} — ${totalItems} ${totalItems === 1 ? 'articolo' : 'articoli'}`
+                : `${t('nav.cart')} — vuoto`}
+            >
+              <FiShoppingCart size={18} aria-hidden="true" />
               {totalItems > 0 && (
-                <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 bg-brand text-white text-[10px] font-semibold rounded-full flex items-center justify-center tnum">
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 bg-brand text-white text-[10px] font-semibold rounded-full flex items-center justify-center tnum"
+                >
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}
             </button>
+
+            {/* Adding to the cart happens on another page entirely, so without
+                this the only feedback was a badge silently ticking up. */}
+            <span className="sr-only" role="status" aria-live="polite">
+              {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'articolo' : 'articoli'} nel carrello` : ''}
+            </span>
 
             {isAuthenticated ? (
               <div className="relative hidden sm:block">

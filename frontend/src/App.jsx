@@ -58,13 +58,17 @@ const PublicOnly = ({ children }) => {
 // column offsets by exactly that rather than each page guessing.
 const MainLayout = ({ children }) => (
   <div className="flex flex-col min-h-screen">
+    {/* First thing in the tab order. Without it, reaching the page content by
+        keyboard meant tabbing past the entire nav, search and cart on every
+        single page. Visible only while focused. */}
+    <a href="#main-content" className="skip-link">Salta al contenuto</a>
     <Header />
     {/* Sits under the fixed header, above the page, so it is the first thing
         read after the nav rather than buried inside a settings screen. */}
     <div className="pt-16">
       <VerificationBanner />
     </div>
-    <main className="flex-1">{children}</main>
+    <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
     <Footer />
     <CartSidebar />
   </div>
