@@ -1,15 +1,11 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartSidebar from './components/Cart/CartSidebar';
 import PageLoader from './components/UI/PageLoader';
-import SmoothScroll from './components/UI/SmoothScroll';
-import ScrollProgress from './components/UI/ScrollProgress';
-import PageTransition from './components/UI/PageTransition';
-import Preloader from './components/UI/Preloader';
+import ScrollToTop from './components/UI/ScrollToTop';
 import { useAuthStore } from './store/useStore';
 
 // Lazy-loaded pages for code splitting
@@ -54,11 +50,12 @@ const PublicOnly = ({ children }) => {
   return !isAuthenticated ? children : <Navigate to="/profile" replace />;
 };
 
-// Pages with header/footer
+// Pages with header/footer. The header is fixed and 64px tall, so the main
+// column offsets by exactly that rather than each page guessing.
 const MainLayout = ({ children }) => (
   <div className="flex flex-col min-h-screen">
     <Header />
-    <main className="flex-1">{children}</main>
+    <main className="flex-1 pt-16">{children}</main>
     <Footer />
     <CartSidebar />
   </div>
@@ -72,37 +69,28 @@ const AdminLayout = ({ children }) => (
 export default function App() {
   return (
     <>
-      <Preloader />
-      <SmoothScroll />
-      <ScrollProgress />
-      <PageTransition />
-      {/* Film grain overlay */}
-      <div className="grain-overlay" aria-hidden="true" />
+      <ScrollToTop />
       <Toaster
-        position="top-right"
+        position="bottom-center"
         toastOptions={{
-          duration: 4000,
+          duration: 3500,
           style: {
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Instrument Sans', system-ui, sans-serif",
             fontSize: '14px',
             fontWeight: 500,
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            color: '#17171B',
+            border: '1px solid #E5E5E9',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            boxShadow: '0 4px 14px rgba(23,23,27,0.08)',
+            maxWidth: '420px',
           },
-          success: {
-            iconTheme: { primary: '#D8125B', secondary: '#fff' },
-            style: { border: '1px solid rgba(216,18,91,0.2)' }
-          },
-          error: {
-            iconTheme: { primary: '#ef4444', secondary: '#fff' },
-            style: { border: '1px solid rgba(239,68,68,0.2)' }
-          }
+          success: { iconTheme: { primary: '#17171B', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#DC2626', secondary: '#fff' } },
         }}
       />
 
       <Suspense fallback={<PageLoader />}>
-        <AnimatePresence mode="wait">
           <Routes>
             {/* Admin Routes */}
             <Route path="/admin/*" element={
@@ -158,7 +146,6 @@ export default function App() {
             {/* 404 */}
             <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
           </Routes>
-        </AnimatePresence>
       </Suspense>
     </>
   );

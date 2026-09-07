@@ -25,7 +25,7 @@ export default function CartSidebar() {
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-dark/60 z-50 backdrop-blur-sm"
+            className="fixed inset-0 bg-ink/60 z-50 backdrop-blur-sm"
             variants={backdropVariants}
             initial="hidden"
             animate="visible"
@@ -46,21 +46,17 @@ export default function CartSidebar() {
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center">
-                    <FiShoppingBag size={17} className="text-brand" />
-                  </div>
+                  
                   <div>
-                    <h2 className="font-heading font-bold text-dark leading-tight">{t('cart.title')}</h2>
+                    <h2 className="font-heading font-semibold text-ink leading-tight">{t('cart.title')}</h2>
                     {totalItems > 0 && (
-                      <p className="text-text-secondary text-xs font-body">{totalItems} {totalItems === 1 ? 'articolo' : 'articoli'}</p>
+                      <p className="text-muted text-xs font-body">{totalItems} {totalItems === 1 ? 'articolo' : 'articoli'}</p>
                     )}
                   </div>
                 </div>
                 <motion.button
                   onClick={() => setOpen(false)}
-                  className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-dark transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.9 }}
+                  className="w-9 h-9 rounded-xl bg-sunken hover:bg-line flex items-center justify-center text-ink transition-colors"
                 >
                   <FiX size={18} />
                 </motion.button>
@@ -68,18 +64,18 @@ export default function CartSidebar() {
 
               {/* Free shipping progress */}
               {items.length > 0 && (
-                <div className={`rounded-2xl p-3.5 ${freeShipping ? 'bg-green-50 border border-green-100' : 'bg-brand/5 border border-brand/10'}`}>
+                <div className={`rounded-2xl p-3.5 ${freeShipping ? 'bg-sunken border border-line' : 'bg-sunken border border-line'}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <FiTruck size={13} className={freeShipping ? 'text-green-600' : 'text-brand'} />
-                    <p className={`text-xs font-heading font-semibold ${freeShipping ? 'text-green-700' : 'text-brand'}`}>
+                    <FiTruck size={13} className="text-muted" />
+                    <p className={`text-xs font-heading font-semibold text-ink`}>
                       {freeShipping
-                        ? '🎉 Spedizione gratuita sbloccata!'
+                        ? 'Spedizione gratuita sbloccata'
                         : `Aggiungi ${formatPrice(amountLeft)} per la spedizione gratuita`}
                     </p>
                   </div>
                   <div className="h-1.5 bg-white/70 rounded-full overflow-hidden">
                     <motion.div
-                      className={`h-full rounded-full ${freeShipping ? 'bg-green-500' : 'bg-brand'}`}
+                      className={`h-full rounded-full ${freeShipping ? 'bg-ink' : 'bg-brand'}`}
                       initial={{ width: 0 }}
                       animate={{ width: `${shippingProgress}%` }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -90,7 +86,7 @@ export default function CartSidebar() {
             </div>
 
             {/* Divider */}
-            <div className="h-px bg-gray-100 mx-6" />
+            <div className="h-px bg-sunken mx-6" />
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -101,20 +97,14 @@ export default function CartSidebar() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, delay: 0.1 }}
                 >
-                  <motion.div
-                    className="w-24 h-24 rounded-3xl bg-gradient-to-br from-brand/10 to-brand/5 flex items-center justify-center mb-5"
-                    animate={{ y: [0, -6, 0] }}
-                    transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                  >
-                    <FiShoppingBag size={36} className="text-brand/50" />
-                  </motion.div>
-                  <p className="font-heading font-bold text-dark text-lg mb-1">{t('cart.empty')}</p>
-                  <p className="text-text-secondary text-sm font-body max-w-44 leading-relaxed">{t('cart.emptyMessage')}</p>
+                  <div className="w-14 h-14 rounded-full bg-sunken border border-line flex items-center justify-center mb-5">
+                    <FiShoppingBag size={22} className="text-muted" />
+                  </div>
+                  <p className="font-heading font-semibold text-ink text-lg mb-1">{t('cart.empty')}</p>
+                  <p className="text-muted text-sm font-body max-w-44 leading-relaxed">{t('cart.emptyMessage')}</p>
                   <motion.button
                     onClick={() => setOpen(false)}
                     className="btn btn-primary mt-6 text-sm px-7 py-3"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
                   >
                     Scopri i prodotti
                   </motion.button>
@@ -135,18 +125,17 @@ export default function CartSidebar() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -40, height: 0, marginBottom: 0, paddingBottom: 0 }}
                         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                        className="group relative bg-gray-50/60 hover:bg-gray-50 rounded-2xl p-3.5 transition-colors"
-                        style={{ border: '1px solid rgba(44,46,57,0.06)' }}
+                        className="group relative bg-sunken/60 hover:bg-sunken rounded-2xl p-3.5 transition-colors"
+                        style={{ border: '1px solid var(--line)' }}
                       >
                         <div className="flex gap-3">
                           {/* Image */}
                           <Link to={`/prodotti/${item.slug}`} onClick={() => setOpen(false)} className="flex-shrink-0">
-                            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden bg-white ring-1 ring-gray-200">
+                            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden bg-white ring-1 ring-line">
                               <motion.img
                                 src={item.image_url || `https://picsum.photos/seed/${item.product_id}/200/200`}
                                 alt={item.product_name}
                                 className="w-full h-full object-cover"
-                                whileHover={{ scale: 1.07 }}
                                 transition={{ duration: 0.3 }}
                               />
                             </div>
@@ -156,40 +145,37 @@ export default function CartSidebar() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
                               <Link to={`/prodotti/${item.slug}`} onClick={() => setOpen(false)}>
-                                <p className="font-heading font-semibold text-dark text-[13px] leading-tight hover:text-brand transition-colors line-clamp-2">
+                                <p className="font-heading font-semibold text-ink text-[13px] leading-tight hover:text-muted transition-colors line-clamp-2">
                                   {item.product_name}
                                 </p>
                               </Link>
                               <motion.button
                                 onClick={() => removeItem(item.id)}
-                                className="w-6 h-6 rounded-lg bg-transparent hover:bg-red-100 text-gray-300 hover:text-red-500 flex items-center justify-center transition-all flex-shrink-0"
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.85 }}
+                                className="w-6 h-6 rounded-lg bg-transparent hover:bg-red-100 text-faint hover:text-red-500 flex items-center justify-center transition-all flex-shrink-0"
                               >
                                 <FiX size={13} />
                               </motion.button>
                             </div>
 
                             {item.variant_name && (
-                              <span className="inline-block mt-1 text-[10px] font-body text-text-secondary bg-gray-200/70 px-2 py-0.5 rounded-full">
+                              <span className="inline-block mt-1 text-[10px] font-body text-muted bg-gray-200/70 px-2 py-0.5 rounded-full">
                                 {item.variant_name}
                               </span>
                             )}
 
                             <div className="flex items-center justify-between mt-2.5">
                               {/* Qty */}
-                              <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow-sm ring-1 ring-gray-200/80">
+                              <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow-sm ring-1 ring-line/80">
                                 <motion.button
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
-                                  className="w-6 h-6 rounded-lg hover:bg-gray-100 disabled:opacity-30 flex items-center justify-center transition-all text-dark"
-                                  whileTap={{ scale: 0.8 }}
+                                  className="w-6 h-6 rounded-lg hover:bg-sunken disabled:opacity-30 flex items-center justify-center transition-all text-ink"
                                 >
                                   <FiMinus size={11} />
                                 </motion.button>
                                 <motion.span
                                   key={item.quantity}
-                                  className="w-6 text-center font-heading font-bold text-dark text-xs"
+                                  className="w-6 text-center font-heading font-bold text-ink text-xs"
                                   initial={{ scale: 0.7 }}
                                   animate={{ scale: 1 }}
                                   transition={{ type: 'spring', stiffness: 500 }}
@@ -199,8 +185,7 @@ export default function CartSidebar() {
                                 <motion.button
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                   disabled={item.quantity >= (item.stock || 99)}
-                                  className="w-6 h-6 rounded-lg hover:bg-gray-100 disabled:opacity-30 flex items-center justify-center transition-all text-dark"
-                                  whileTap={{ scale: 0.8 }}
+                                  className="w-6 h-6 rounded-lg hover:bg-sunken disabled:opacity-30 flex items-center justify-center transition-all text-ink"
                                 >
                                   <FiPlus size={11} />
                                 </motion.button>
@@ -229,7 +214,7 @@ export default function CartSidebar() {
             <AnimatePresence>
               {items.length > 0 && (
                 <motion.div
-                  className="border-t border-gray-100 px-6 py-5 space-y-4"
+                  className="border-t border-line px-6 py-5 space-y-4"
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
@@ -237,10 +222,10 @@ export default function CartSidebar() {
                   {/* Totals */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-secondary font-body">{t('cart.subtotal')}</span>
+                      <span className="text-muted font-body">{t('cart.subtotal')}</span>
                       <motion.span
                         key={subtotal}
-                        className="font-heading font-semibold text-dark"
+                        className="font-heading font-semibold text-ink"
                         initial={{ scale: 0.85 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', stiffness: 400 }}
@@ -249,13 +234,13 @@ export default function CartSidebar() {
                       </motion.span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-secondary font-body">{t('cart.shipping')}</span>
-                      <span className={freeShipping ? 'text-green-600 font-heading font-semibold text-xs' : 'text-text-secondary font-body'}>
+                      <span className="text-muted font-body">{t('cart.shipping')}</span>
+                      <span className={freeShipping ? 'text-green-600 font-heading font-semibold text-xs' : 'text-muted font-body'}>
                         {freeShipping ? 'Gratuita' : formatPrice(4.99)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <span className="font-heading font-bold text-dark">{t('cart.total')}</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-line">
+                      <span className="font-heading font-bold text-ink">{t('cart.total')}</span>
                       <motion.span
                         key={`total-${subtotal}`}
                         className="font-display font-bold text-2xl text-brand"
@@ -265,15 +250,13 @@ export default function CartSidebar() {
                         {formatPrice(freeShipping ? subtotal : subtotal + 4.99)}
                       </motion.span>
                     </div>
-                    <p className="text-text-secondary text-[11px] font-body">{t('cart.tax')}</p>
+                    <p className="text-muted text-[11px] font-body">{t('cart.tax')}</p>
                   </div>
 
                   {/* CTA */}
                   <Link to="/checkout" onClick={() => setOpen(false)}>
                     <motion.button
                       className="btn btn-primary w-full text-sm py-3.5 flex items-center justify-center gap-2 font-heading font-semibold"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
                     >
                       {t('cart.checkout')}
                       <FiArrowRight size={15} />
@@ -282,7 +265,7 @@ export default function CartSidebar() {
 
                   <button
                     onClick={() => setOpen(false)}
-                    className="w-full text-center text-text-secondary text-xs font-body hover:text-dark transition-colors py-1"
+                    className="w-full text-center text-muted text-xs font-body hover:text-ink transition-colors py-1"
                   >
                     {t('cart.continueShopping')}
                   </button>

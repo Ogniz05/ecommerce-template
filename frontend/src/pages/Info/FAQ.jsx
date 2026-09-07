@@ -52,7 +52,7 @@ function FAQItem({ q, a, index }) {
   return (
     <motion.div
       layout
-      className="rounded-2xl border border-white/8 overflow-hidden bg-dark-800/40 backdrop-blur-sm"
+      className="border-b border-line"
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -60,18 +60,17 @@ function FAQItem({ q, a, index }) {
     >
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between gap-4 p-5 md:p-6 text-left transition-all duration-200 ${open ? 'bg-brand/8' : 'hover:bg-white/4'}`}
+        className="w-full flex items-center justify-between gap-4 py-5 text-left"
       >
-        <span className={`font-heading font-medium text-sm md:text-base transition-colors duration-200 ${open ? 'text-brand' : 'text-white/80'}`}>
+        <span className={`font-heading font-medium text-sm md:text-base transition-colors duration-200 ${open ? 'text-ink' : 'text-body'}`}>
           {q}
         </span>
         <motion.div
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="flex-shrink-0 w-7 h-7 rounded-full border border-white/10 flex items-center justify-center"
-          style={{ background: open ? 'rgba(216,18,91,0.15)' : 'transparent' }}
+          className="flex-shrink-0 w-6 h-6 flex items-center justify-center"
         >
-          <FiChevronDown size={14} className={open ? 'text-brand' : 'text-white/40'} />
+          <FiChevronDown size={14} className={open ? 'text-ink' : 'text-muted'} />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -82,9 +81,8 @@ function FAQItem({ q, a, index }) {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="px-5 md:px-6 pb-6 pt-1">
-              <div className="w-8 h-px bg-brand/30 mb-3" />
-              <p className="text-white/55 text-sm leading-relaxed">{a}</p>
+            <div className="pb-6 pr-10">
+              <p className="text-body text-sm leading-relaxed">{a}</p>
             </div>
           </motion.div>
         )}
@@ -112,79 +110,34 @@ export default function FAQ() {
   const totalVisible = filtered.reduce((sum, g) => sum + g.items.length, 0);
 
   return (
-    <div className="page-wrapper bg-dark">
+    <div className="page-wrapper">
 
-      {/* ── HERO ──────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <motion.div
-            className="absolute w-[600px] h-[600px] rounded-full blur-3xl"
-            style={{ background: 'radial-gradient(circle, rgba(216,18,91,0.14) 0%, transparent 65%)', top: '-20%', left: '50%', transform: 'translateX(-50%)' }}
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundSize: '60px 60px',
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-          }} />
-        </div>
+      <header className="container-app pt-12 pb-8 md:pt-16 md:pb-10 max-w-3xl">
+        <p className="eyebrow text-muted">Assistenza</p>
+        <h1 className="display-lg mt-2">{t('faq.title')}</h1>
+        <p className="section-subtitle mt-4">{t('faq.subtitle')}</p>
 
-        <div className="container-app relative z-10 text-center max-w-2xl">
-          <motion.div
-            className="inline-flex items-center border border-brand/30 bg-brand/10 text-brand text-xs font-heading font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            Domande frequenti
-          </motion.div>
-
-          <motion.h1
-            className="font-display font-bold text-5xl md:text-7xl text-white mb-5 leading-tight"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {t('faq.title')}
-          </motion.h1>
-
-          <motion.p
-            className="text-white/50 mb-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-          >
-            {t('faq.subtitle')}
-          </motion.p>
-
-          {/* Search */}
-          <motion.div
-            className="relative max-w-lg mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-          >
-            <FiSearch size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <div className="relative mt-8">
+            <FiSearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none z-10" />
             <input
               ref={searchRef}
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={t('faq.searchPlaceholder')}
-              className="w-full py-4 pl-12 pr-5 rounded-2xl bg-white/90 border border-white/0 text-dark placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:bg-white transition-all duration-200 font-body text-sm"
+              className="input pl-11"
             />
             {search && (
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 text-xs font-heading"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted text-xs font-heading"
               >
                 {totalVisible} risultati
               </motion.span>
             )}
-          </motion.div>
         </div>
-      </section>
+      </header>
 
       {/* ── CONTENT ───────────────────────────────────────── */}
       <section className="pb-28">
@@ -192,7 +145,7 @@ export default function FAQ() {
 
           {/* Category pills */}
           <motion.div
-            className="flex flex-wrap gap-2 mb-12"
+            className="flex flex-wrap gap-2 mb-10"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
@@ -204,10 +157,10 @@ export default function FAQ() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-heading font-medium transition-all duration-200 ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-heading font-medium transition-colors ${
                     active
-                      ? 'bg-brand text-white shadow-[0_0_20px_rgba(216,18,91,0.3)]'
-                      : 'border border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white'
+                      ? 'bg-ink text-white border border-ink'
+                      : 'border border-line text-body hover:border-ink hover:text-ink'
                   }`}
                 >
                   {Icon && <Icon size={13} />}
@@ -224,11 +177,11 @@ export default function FAQ() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <FiSearch size={24} className="text-white/30" />
+              <div className="w-12 h-12 rounded-full bg-sunken border border-line flex items-center justify-center mx-auto mb-4">
+                <FiSearch size={18} className="text-muted" />
               </div>
-              <p className="text-white/40 font-heading">{t('faq.noResults')}</p>
-              <button onClick={() => { setSearch(''); setActiveCategory('all'); }} className="text-brand text-sm mt-3 hover:underline">
+              <p className="text-ink font-heading font-semibold">{t('faq.noResults')}</p>
+              <button onClick={() => { setSearch(''); setActiveCategory('all'); }} className="text-muted text-sm mt-3 underline underline-offset-4 hover:text-ink transition-colors">
                 Azzera filtri
               </button>
             </motion.div>
@@ -241,13 +194,13 @@ export default function FAQ() {
                     {/* Category header */}
                     <div className="flex items-center gap-3 mb-5">
                       {Icon && (
-                        <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center">
-                          <Icon size={15} className="text-brand" />
+                        <div className="w-8 h-8 rounded-full bg-sunken border border-line flex items-center justify-center">
+                          <Icon size={14} className="text-muted" />
                         </div>
                       )}
-                      <h2 className="font-heading font-bold text-white text-lg">{group.category}</h2>
-                      <div className="flex-1 h-px bg-white/6" />
-                      <span className="text-white/25 text-xs font-heading">{group.items.length}</span>
+                      <h2 className="font-heading font-semibold text-ink text-lg">{group.category}</h2>
+                      <div className="flex-1 h-px bg-line" />
+                      <span className="text-muted text-xs font-heading tnum">{group.items.length}</span>
                     </div>
                     <div className="space-y-3">
                       {group.items.map((item, i) => (
@@ -262,21 +215,19 @@ export default function FAQ() {
 
           {/* CTA */}
           <motion.div
-            className="mt-16 rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/10 to-dark-800 p-8 md:p-10 text-center relative overflow-hidden"
+            className="mt-16 rounded-md border border-line bg-sunken p-8 md:p-10 text-center"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute w-64 h-64 rounded-full blur-3xl top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                style={{ background: 'radial-gradient(circle, rgba(216,18,91,0.2) 0%, transparent 70%)' }} />
             </div>
             <div className="relative">
-              <h3 className="font-display font-bold text-white text-2xl mb-2">Non hai trovato risposta?</h3>
-              <p className="text-white/50 text-sm mb-7">Il nostro team è sempre disponibile per aiutarti personalmente.</p>
+              <h3 className="font-display text-2xl text-ink mb-2">Non hai trovato risposta?</h3>
+              <p className="text-muted text-sm mb-7">Scrivici: rispondiamo entro un giorno lavorativo.</p>
               <Link
                 to="/contatti"
-                className="inline-flex items-center gap-2 bg-brand text-white font-heading font-semibold px-8 py-3.5 rounded-full hover:bg-brand-dark transition-colors"
+                className="btn btn-primary"
               >
                 Contattaci <FiArrowRight size={15} />
               </Link>

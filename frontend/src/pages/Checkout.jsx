@@ -53,7 +53,7 @@ function AddressStep({ data, onChange, onNext }) {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-      <h2 className="font-heading font-bold text-xl text-dark mb-6">{t('checkout.step1')}</h2>
+      <h2 className="font-heading font-bold text-xl text-ink mb-6">{t('checkout.step1')}</h2>
       <div className="grid grid-cols-2 gap-4">
         <AddressField name="first_name" label={t('checkout.firstName')} req {...fieldProps} />
         <AddressField name="last_name" label={t('checkout.lastName')} req {...fieldProps} />
@@ -85,7 +85,6 @@ function AddressStep({ data, onChange, onNext }) {
       <motion.button
         onClick={handleNext}
         className="btn btn-primary w-full mt-8 py-3.5 flex items-center justify-center gap-2"
-        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
       >
         {t('checkout.continueToShipping')} <FiChevronRight size={17} />
       </motion.button>
@@ -106,7 +105,7 @@ function ShippingStep({ subtotal, selected, onSelect, onNext, onBack }) {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-      <h2 className="font-heading font-bold text-xl text-dark mb-6">{t('checkout.step2')}</h2>
+      <h2 className="font-heading font-bold text-xl text-ink mb-6">{t('checkout.step2')}</h2>
       {loading ? (
         <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}</div>
       ) : (
@@ -116,23 +115,21 @@ function ShippingStep({ subtotal, selected, onSelect, onNext, onBack }) {
               key={method.id}
               onClick={() => onSelect(method)}
               className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all
-                ${selected?.id === method.id ? 'border-brand bg-brand/5' : 'border-gray-200 hover:border-brand/50'}`}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
+                ${selected?.id === method.id ? 'border-brand bg-brand/5' : 'border-line hover:border-brand/50'}`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
-                  ${selected?.id === method.id ? 'border-brand' : 'border-gray-300'}`}>
+                  ${selected?.id === method.id ? 'border-brand' : 'border-line'}`}>
                   {selected?.id === method.id && (
                     <motion.div className="w-2.5 h-2.5 rounded-full bg-brand" initial={{ scale: 0 }} animate={{ scale: 1 }} />
                   )}
                 </div>
                 <div>
-                  <p className="font-heading font-semibold text-dark text-sm">{method.display_name || method.name}</p>
-                  <p className="text-text-secondary text-xs">{method.estimated_days_min}–{method.estimated_days_max} giorni lavorativi</p>
+                  <p className="font-heading font-semibold text-ink text-sm">{method.display_name || method.name}</p>
+                  <p className="text-muted text-xs">{method.estimated_days_min}–{method.estimated_days_max} giorni lavorativi</p>
                 </div>
               </div>
-              <span className={`font-heading font-bold text-sm ${method.is_free ? 'text-green-600' : 'text-dark'}`}>
+              <span className={`font-heading font-bold text-sm ${method.is_free ? 'text-green-600' : 'text-ink'}`}>
                 {method.is_free ? t('cart.free') : formatPrice(method.price)}
               </span>
             </motion.div>
@@ -145,7 +142,6 @@ function ShippingStep({ subtotal, selected, onSelect, onNext, onBack }) {
           onClick={onNext}
           disabled={!selected}
           className="btn btn-primary flex-1 py-3.5 flex items-center justify-center gap-2"
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
         >
           {t('checkout.continueToPayment')} <FiChevronRight size={17} />
         </motion.button>
@@ -181,7 +177,7 @@ function StripePaymentForm({ orderId, totalAmount, onSuccess, onBack }) {
 
   return (
     <div className="space-y-5">
-      <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+      <div className="p-4 rounded-xl border border-line bg-sunken">
         <CardElement options={{
           style: {
             base: { fontFamily: "'DM Sans', sans-serif", fontSize: '15px', color: '#2C2E39', '::placeholder': { color: '#9ca3af' } }
@@ -194,7 +190,6 @@ function StripePaymentForm({ orderId, totalAmount, onSuccess, onBack }) {
           onClick={handlePay}
           disabled={loading || !stripe}
           className="btn btn-primary flex-1 py-3.5 flex items-center justify-center gap-2"
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
         >
           {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (
             <><FiLock size={15} /> Paga {formatPrice(totalAmount)}</>
@@ -211,16 +206,16 @@ function PaymentStep({ orderId, totalAmount, onSuccess, onBack }) {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-      <h2 className="font-heading font-bold text-xl text-dark mb-6">{t('checkout.step3')}</h2>
+      <h2 className="font-heading font-bold text-xl text-ink mb-6">{t('checkout.step3')}</h2>
       <div className="flex gap-3 mb-6">
         {['stripe', 'paypal'].map(m => (
           <button
             key={m}
             onClick={() => setMethod(m)}
-            className={`flex-1 py-3 rounded-xl border-2 font-heading font-semibold text-sm transition-all capitalize
-              ${method === m ? 'border-brand bg-brand/5 text-brand' : 'border-gray-200 text-dark hover:border-brand/50'}`}
+            className={`flex-1 py-3 rounded-md border font-heading font-semibold text-sm transition-colors
+              ${method === m ? 'border-ink bg-ink text-white' : 'border-line-strong text-ink hover:border-ink'}`}
           >
-            {m === 'stripe' ? '💳 Carta di Credito' : '🅿️ PayPal'}
+            {m === 'stripe' ? 'Carta di credito' : 'PayPal'}
           </button>
         ))}
       </div>
@@ -229,7 +224,7 @@ function PaymentStep({ orderId, totalAmount, onSuccess, onBack }) {
           <StripePaymentForm orderId={orderId} totalAmount={totalAmount} onSuccess={onSuccess} onBack={onBack} />
         ) : (
           <div className="space-y-4">
-            <p className="text-text-secondary text-sm">Sarai reindirizzato su PayPal per completare il pagamento.</p>
+            <p className="text-muted text-sm">Sarai reindirizzato su PayPal per completare il pagamento.</p>
             <div className="flex gap-3">
               <button onClick={onBack} className="btn btn-ghost px-6 py-3.5 text-sm">{t('checkout.back')}</button>
               <button className="btn btn-primary flex-1 py-3.5">Paga con PayPal</button>
@@ -262,10 +257,10 @@ function SuccessStep({ orderId, orderNumber, isGuest }) {
           <FiCheck size={32} className="text-green-500" />
         </motion.div>
       </motion.div>
-      <h2 className="font-display font-bold text-3xl text-dark mb-3">{t('checkout.orderConfirmed')}</h2>
-      <p className="text-text-secondary mb-2">{t('checkout.thankYou')}</p>
-      <p className="text-text-secondary text-sm mb-1">{t('checkout.orderNumber')}: <strong className="text-dark font-mono">{orderNumber}</strong></p>
-      <p className="text-text-secondary text-sm mb-8">
+      <h2 className="font-display font-bold text-3xl text-ink mb-3">{t('checkout.orderConfirmed')}</h2>
+      <p className="text-muted mb-2">{t('checkout.thankYou')}</p>
+      <p className="text-muted text-sm mb-1">{t('checkout.orderNumber')}: <strong className="text-ink font-mono">{orderNumber}</strong></p>
+      <p className="text-muted text-sm mb-8">
         {isGuest ? 'Riceverai una email di conferma con i dettagli del tuo ordine.' : t('checkout.confirmationEmail')}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -381,15 +376,15 @@ export default function Checkout() {
   return (
     <div className="page-wrapper">
       <div className="container-app py-10">
-        <h1 className="font-display font-bold text-3xl text-dark mb-10">{t('checkout.title')}</h1>
+        <h1 className="font-display font-bold text-3xl text-ink mb-10">{t('checkout.title')}</h1>
 
         {step < 3 && (
           <div className="flex items-center justify-center mb-10">
             {STEPS.slice(0, 3).map((s, i) => (
               <React.Fragment key={s}>
-                <div className={`flex items-center gap-2 transition-all ${i <= step ? 'text-brand' : 'text-gray-300'}`}>
+                <div className={`flex items-center gap-2 transition-all ${i <= step ? 'text-brand' : 'text-faint'}`}>
                   <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-heading font-bold transition-all
-                    ${i < step ? 'bg-brand border-brand text-white' : i === step ? 'border-brand text-brand' : 'border-gray-300 text-gray-300'}`}>
+                    ${i < step ? 'bg-brand border-brand text-white' : i === step ? 'border-brand text-brand' : 'border-line text-faint'}`}>
                     {i < step ? <FiCheck size={14} /> : i + 1}
                   </div>
                   <span className="font-heading font-medium text-sm hidden sm:block">
@@ -415,8 +410,8 @@ export default function Checkout() {
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           >
             <FiUser size={16} className="text-brand flex-shrink-0" />
-            <p className="text-sm text-dark flex-1">Hai già un account? <a href="/auth/login" className="text-brand font-semibold hover:underline">Accedi</a> per salvare l&apos;ordine nel tuo profilo.</p>
-            <span className="text-xs text-text-secondary">oppure continua come ospite qui sotto</span>
+            <p className="text-sm text-ink flex-1">Hai già un account? <a href="/auth/login" className="text-brand font-semibold hover:underline">Accedi</a> per salvare l&apos;ordine nel tuo profilo.</p>
+            <span className="text-xs text-muted">oppure continua come ospite qui sotto</span>
           </motion.div>
         )}
 
@@ -450,7 +445,7 @@ export default function Checkout() {
               {creatingOrder && (
                 <div className="flex items-center justify-center gap-3 py-4">
                   <span className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                  <span className="text-text-secondary text-sm">Creazione ordine...</span>
+                  <span className="text-muted text-sm">Creazione ordine...</span>
                 </div>
               )}
             </div>
@@ -462,18 +457,18 @@ export default function Checkout() {
               className="card p-6 h-fit sticky top-24"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
             >
-              <h3 className="font-heading font-bold text-dark text-base mb-4">{t('checkout.orderSummary')}</h3>
+              <h3 className="font-heading font-bold text-ink text-base mb-4">{t('checkout.orderSummary')}</h3>
               <div className="space-y-3 mb-5">
                 {items.map(item => (
                   <div key={item.id} className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-sunken flex-shrink-0">
                       <img src={item.image_url || 'https://picsum.photos/seed/cart/100/100'} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-body text-sm text-dark font-medium truncate">{item.product_name}</p>
-                      <p className="text-text-secondary text-xs">Qtà: {item.quantity}</p>
+                      <p className="font-body text-sm text-ink font-medium truncate">{item.product_name}</p>
+                      <p className="text-muted text-xs">Qtà: {item.quantity}</p>
                     </div>
-                    <span className="font-heading font-semibold text-dark text-sm flex-shrink-0">
+                    <span className="font-heading font-semibold text-ink text-sm flex-shrink-0">
                       {formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
@@ -481,7 +476,7 @@ export default function Checkout() {
               </div>
               {/* ── Redemption: loyalty points + gift card ── */}
               {step < 2 && (
-                <div className="border-t border-gray-100 pt-4 space-y-3 mb-1">
+                <div className="border-t border-line pt-4 space-y-3 mb-1">
                   {/* Loyalty points */}
                   {user && loyalty && loyalty.points >= minRedeem && (
                     <label className="flex items-start gap-2.5 cursor-pointer group">
@@ -492,10 +487,10 @@ export default function Checkout() {
                         className="mt-0.5 accent-brand w-4 h-4"
                       />
                       <span className="text-sm">
-                        <span className="font-heading font-semibold text-dark flex items-center gap-1.5">
+                        <span className="font-heading font-semibold text-ink flex items-center gap-1.5">
                           <FiAward size={13} className="text-brand" /> Usa {loyalty.points} punti
                         </span>
-                        <span className="text-text-secondary text-xs">
+                        <span className="text-muted text-xs">
                           Risparmi {formatPrice(loyalty.value)}
                         </span>
                       </span>
@@ -537,15 +532,15 @@ export default function Checkout() {
                 </div>
               )}
 
-              <div className="border-t border-gray-100 pt-4 space-y-2">
-                <div className="flex justify-between text-sm text-text-secondary">
+              <div className="border-t border-line pt-4 space-y-2">
+                <div className="flex justify-between text-sm text-muted">
                   <span>{t('cart.subtotal')}</span><span>{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-text-secondary">
+                <div className="flex justify-between text-sm text-muted">
                   <span>{t('cart.shipping')}</span>
                   <span>{shippingMethod?.is_free ? <span className="text-green-600">{t('cart.free')}</span> : formatPrice(shippingMethod?.price || 4.99)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-text-secondary">
+                <div className="flex justify-between text-sm text-muted">
                   <span>IVA (22%)</span><span>{formatPrice(subtotal * 0.22)}</span>
                 </div>
                 {pointsDiscount > 0 && (
@@ -560,12 +555,12 @@ export default function Checkout() {
                     <span>-{formatPrice(giftDiscount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-heading font-bold text-dark border-t border-gray-100 pt-2 mt-2">
+                <div className="flex justify-between font-heading font-bold text-ink border-t border-line pt-2 mt-2">
                   <span>{t('cart.total')}</span>
                   <span className="text-brand text-lg">{formatPrice(total)}</span>
                 </div>
                 {loyalty && total > 0 && (
-                  <p className="text-text-secondary text-[11px] flex items-center gap-1 pt-1">
+                  <p className="text-muted text-[11px] flex items-center gap-1 pt-1">
                     <FiAward size={10} className="text-brand" /> Guadagnerai {Math.floor(total)} punti con questo ordine
                   </p>
                 )}

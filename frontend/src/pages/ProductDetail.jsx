@@ -24,7 +24,7 @@ function ReviewForm({ productId, onSubmitted }) {
   if (!isAuthenticated) {
     return (
       <div className="card p-5 mb-6 text-center">
-        <p className="text-text-secondary text-sm mb-3">Accedi per lasciare una recensione.</p>
+        <p className="text-muted text-sm mb-3">Accedi per lasciare una recensione.</p>
         <Link to="/auth/login"><button className="btn btn-primary text-sm px-6 py-2.5">Accedi</button></Link>
       </div>
     );
@@ -47,7 +47,7 @@ function ReviewForm({ productId, onSubmitted }) {
 
   return (
     <form onSubmit={submit} className="card p-5 mb-6 space-y-4">
-      <h3 className="font-heading font-semibold text-dark">Scrivi una recensione</h3>
+      <h3 className="font-heading font-semibold text-ink">Scrivi una recensione</h3>
       {/* Stars */}
       <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map(n => (
@@ -59,10 +59,10 @@ function ReviewForm({ productId, onSubmitted }) {
             className="p-0.5"
             aria-label={`${n} stelle`}
           >
-            <FiStar size={24} className={`transition-colors ${n <= (hover || rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+            <FiStar size={24} className={`transition-colors ${n <= (hover || rating) ? 'text-ink fill-current' : 'text-faint'}`} />
           </button>
         ))}
-        {rating > 0 && <span className="text-text-secondary text-sm ml-2">{rating}/5</span>}
+        {rating > 0 && <span className="text-muted text-sm ml-2">{rating}/5</span>}
       </div>
       <input
         value={title}
@@ -81,7 +81,6 @@ function ReviewForm({ productId, onSubmitted }) {
         type="submit"
         disabled={submitting}
         className="btn btn-primary text-sm px-6 py-2.5"
-        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
       >
         {submitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Pubblica recensione'}
       </motion.button>
@@ -121,6 +120,9 @@ export default function ProductDetail() {
 
   useEffect(() => { load(); }, [load]);
 
+  const { user } = useAuthStore();
+  const { product, variants, reviews, related } = data;
+
   // Check stock alert subscription after product loads
   useEffect(() => {
     if (!product) return;
@@ -151,9 +153,6 @@ export default function ProductDetail() {
     } finally { setAlertLoading(false); }
   };
 
-  const { user } = useAuthStore();
-
-  const { product, variants, reviews, related } = data;
   const inWishlist = product ? has(product.id) : false;
 
   const images = product ? [
@@ -232,7 +231,7 @@ export default function ProductDetail() {
     <div className="page-wrapper">
       <SEO
         title={product.display_name || product.name}
-        description={product.display_short_desc || product.short_description || `Acquista ${product.name} su ShopTemplate`}
+        description={product.display_short_desc || product.short_description || `Acquista ${product.name} su Corso`}
         image={images[0]}
         type="product"
         jsonLd={productJsonLd}
@@ -241,20 +240,20 @@ export default function ProductDetail() {
 
         {/* Breadcrumb */}
         <motion.nav
-          className="flex items-center gap-2 text-sm text-text-secondary mb-8 font-body"
+          className="flex items-center gap-2 text-sm text-muted mb-8 font-body"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         >
-          <Link to="/" className="hover:text-brand transition-colors">Home</Link>
+          <Link to="/" className="hover:text-ink transition-colors">Home</Link>
           <FiChevronRight size={13} />
-          <Link to="/catalogo" className="hover:text-brand transition-colors">{t('nav.catalog')}</Link>
+          <Link to="/catalogo" className="hover:text-ink transition-colors">{t('nav.catalog')}</Link>
           <FiChevronRight size={13} />
           {product.category_name && (
             <>
-              <Link to={`/catalogo?category=${product.category_slug}`} className="hover:text-brand transition-colors">{product.category_name}</Link>
+              <Link to={`/catalogo?category=${product.category_slug}`} className="hover:text-ink transition-colors">{product.category_name}</Link>
               <FiChevronRight size={13} />
             </>
           )}
-          <span className="text-dark font-medium truncate max-w-40">{product.display_name || product.name}</span>
+          <span className="text-ink font-medium truncate max-w-40">{product.display_name || product.name}</span>
         </motion.nav>
 
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-16">
@@ -262,7 +261,7 @@ export default function ProductDetail() {
           {/* ─── IMAGE GALLERY ─────────────────── */}
           <motion.div variants={fadeInUp} initial="hidden" animate="visible">
             {/* Main image */}
-            <div className="relative rounded-3xl overflow-hidden aspect-square bg-gray-50 mb-4 group">
+            <div className="relative rounded-3xl overflow-hidden aspect-square bg-sunken mb-4 group">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={selectedImage}
@@ -280,17 +279,15 @@ export default function ProductDetail() {
               <motion.button
                 onClick={() => { toggle(product.id); toast.success(inWishlist ? t('products.removeFromWishlist') : t('products.addToWishlist')); }}
                 className="absolute top-4 right-4 w-11 h-11 rounded-2xl bg-white shadow-md flex items-center justify-center"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
               >
                 <motion.div animate={inWishlist ? { scale: [1, 1.4, 0.9, 1] } : { scale: 1 }} transition={{ duration: 0.4 }}>
-                  <FiHeart size={18} className={inWishlist ? 'text-brand fill-brand' : 'text-dark'} />
+                  <FiHeart size={18} className={inWishlist ? 'text-brand fill-brand' : 'text-ink'} />
                 </motion.div>
               </motion.button>
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.is_featured && <span className="badge-new">Novità</span>}
+                {Boolean(Number(product.is_featured)) && <span className="badge-new">Novità</span>}
                 {product.compare_price > product.price && (
                   <span className="badge-sale">
                     -{Math.round(((product.compare_price - product.price) / product.compare_price) * 100)}%
@@ -306,9 +303,7 @@ export default function ProductDetail() {
                   <motion.button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all ${selectedImage === i ? 'border-brand' : 'border-transparent'}`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className={`w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all ${selectedImage === i ? 'border-ink' : 'border-transparent'}`}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </motion.button>
@@ -327,12 +322,12 @@ export default function ProductDetail() {
             <motion.div variants={staggerItem}>
               {product.category_name && (
                 <Link to={`/catalogo?category=${product.category_slug}`}>
-                  <span className="text-brand font-heading font-semibold text-sm uppercase tracking-widest hover:underline">
+                  <span className="eyebrow text-muted hover:text-ink transition-colors">
                     {product.category_name}
                   </span>
                 </Link>
               )}
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-dark mt-2 leading-tight">
+              <h1 className="font-display text-3xl md:text-4xl font-bold text-ink mt-2 leading-tight">
                 {product.display_name || product.name}
               </h1>
             </motion.div>
@@ -342,27 +337,21 @@ export default function ProductDetail() {
               <motion.div variants={staggerItem} className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
-                    <FiStar key={i} size={16} className={i < Math.round(product.avg_rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'} />
+                    <FiStar key={i} size={16} className={i < Math.round(product.avg_rating) ? 'text-ink fill-current' : 'text-faint'} />
                   ))}
                 </div>
-                <span className="font-heading font-semibold text-dark">{parseFloat(product.avg_rating).toFixed(1)}</span>
-                <span className="text-text-secondary text-sm">({product.review_count} recensioni)</span>
+                <span className="font-heading font-semibold text-ink">{parseFloat(product.avg_rating).toFixed(1)}</span>
+                <span className="text-muted text-sm">({product.review_count} recensioni)</span>
               </motion.div>
             )}
 
             {/* Price */}
             <motion.div variants={staggerItem} className="flex items-center gap-4">
-              <motion.span
-                className="font-display font-bold text-4xl text-brand"
-                key={currentPrice}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
+              <span className="font-heading font-semibold text-3xl text-ink tnum">
                 {formatPrice(currentPrice)}
-              </motion.span>
+              </span>
               {product.compare_price && parseFloat(product.compare_price) > currentPrice && (
-                <span className="font-body text-text-secondary text-xl line-through">
+                <span className="font-body text-faint text-lg line-through tnum">
                   {formatPrice(product.compare_price)}
                 </span>
               )}
@@ -370,7 +359,7 @@ export default function ProductDetail() {
 
             {/* Short description */}
             {(product.display_short_desc || product.short_description) && (
-              <motion.p variants={staggerItem} className="text-text-secondary font-body leading-relaxed">
+              <motion.p variants={staggerItem} className="text-muted font-body leading-relaxed">
                 {product.display_short_desc || product.short_description}
               </motion.p>
             )}
@@ -381,10 +370,10 @@ export default function ProductDetail() {
               const selectedInGroup = variantList.find(v => v.id === selectedVariant?.id);
               return (
                 <motion.div key={type} variants={staggerItem}>
-                  <p className="font-heading font-semibold text-dark text-sm mb-3 capitalize flex items-center gap-2">
+                  <p className="font-heading font-semibold text-ink text-sm mb-3 capitalize flex items-center gap-2">
                     {type.replace(/_/g, ' ')}
                     {selectedInGroup && (
-                      <span className="text-brand font-medium">— {selectedInGroup.value}</span>
+                      <span className="text-muted font-medium">— {selectedInGroup.value}</span>
                     )}
                   </p>
                   <div className="flex flex-wrap gap-2.5">
@@ -408,8 +397,6 @@ export default function ProductDetail() {
                                 : 'border-2 border-transparent hover:ring-2 hover:ring-brand/40 hover:ring-offset-1'
                             }`}
                             style={{ backgroundColor: v.color_hex }}
-                            whileHover={!oos ? { scale: 1.1 } : {}}
-                            whileTap={!oos ? { scale: 0.9 } : {}}
                           >
                             {oos && (
                               <span className="absolute inset-0 rounded-full overflow-hidden flex items-center justify-center">
@@ -425,15 +412,13 @@ export default function ProductDetail() {
                           key={v.id}
                           onClick={() => !oos && setSelectedVariant(isSelected ? null : v)}
                           disabled={oos}
-                          className={`relative px-4 py-2 rounded-xl border-2 font-heading font-medium text-sm transition-all ${
+                          className={`relative px-4 py-2 rounded-md border font-heading font-medium text-sm transition-colors ${
                             isSelected
-                              ? 'border-brand bg-brand/5 text-brand'
+                              ? 'border-ink bg-ink text-white'
                               : oos
-                              ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                              : 'border-gray-200 text-dark hover:border-brand hover:text-brand'
+                              ? 'border-line bg-sunken text-faint cursor-not-allowed'
+                              : 'border-line-strong text-ink hover:border-ink'
                           }`}
-                          whileHover={!oos ? { scale: 1.03 } : {}}
-                          whileTap={!oos ? { scale: 0.97 } : {}}
                         >
                           {v.value}
                           {oos && (
@@ -461,9 +446,9 @@ export default function ProductDetail() {
             {isOutOfStock && (
               <motion.div
                 variants={staggerItem}
-                className="p-4 rounded-2xl bg-gray-50 border border-gray-200"
+                className="p-4 rounded-2xl bg-sunken border border-line"
               >
-                <p className="font-heading font-semibold text-dark text-sm mb-3 flex items-center gap-2">
+                <p className="font-heading font-semibold text-ink text-sm mb-3 flex items-center gap-2">
                   <FiBell size={14} className="text-brand" />
                   Avvisami quando torna disponibile
                 </p>
@@ -473,7 +458,7 @@ export default function ProductDetail() {
                     <button
                       onClick={toggleStockAlert}
                       disabled={alertLoading}
-                      className="text-xs text-text-secondary hover:text-red-500 transition-colors flex items-center gap-1"
+                      className="text-xs text-muted hover:text-red-500 transition-colors flex items-center gap-1"
                     >
                       <FiBellOff size={12} /> Rimuovi
                     </button>
@@ -491,7 +476,6 @@ export default function ProductDetail() {
                       onClick={toggleStockAlert}
                       disabled={alertLoading}
                       className="btn btn-primary text-sm px-4 py-2.5 flex items-center gap-1.5 flex-shrink-0"
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                     >
                       {alertLoading
                         ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -505,18 +489,17 @@ export default function ProductDetail() {
 
             {/* Quantity + Add to cart */}
             <motion.div variants={staggerItem} className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
+              <div className="flex items-center gap-1 bg-sunken rounded-xl p-1 border border-line">
                 <motion.button
                   onClick={() => setQty(q => Math.max(1, q - 1))}
                   disabled={qty <= 1}
                   className="w-10 h-10 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center transition-all"
-                  whileTap={{ scale: 0.85 }}
                 >
                   <FiMinus size={15} />
                 </motion.button>
                 <motion.span
                   key={qty}
-                  className="w-10 text-center font-heading font-bold text-dark"
+                  className="w-10 text-center font-heading font-bold text-ink"
                   initial={{ scale: 0.8 }} animate={{ scale: 1 }}
                 >
                   {qty}
@@ -525,7 +508,6 @@ export default function ProductDetail() {
                   onClick={() => setQty(q => Math.min(stock, q + 1))}
                   disabled={qty >= stock}
                   className="w-10 h-10 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center transition-all"
-                  whileTap={{ scale: 0.85 }}
                 >
                   <FiPlus size={15} />
                 </motion.button>
@@ -535,9 +517,7 @@ export default function ProductDetail() {
                 onClick={handleAddToCart}
                 disabled={isOutOfStock || addingCart}
                 className={`flex-1 btn text-sm py-3.5 flex items-center justify-center gap-2 font-heading font-semibold
-                  ${isOutOfStock ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'btn-primary'}`}
-                whileHover={!isOutOfStock ? { scale: 1.02 } : {}}
-                whileTap={!isOutOfStock ? { scale: 0.98 } : {}}
+                  ${isOutOfStock ? 'bg-gray-300 text-muted cursor-not-allowed' : 'btn-primary'}`}
               >
                 <AnimatePresence mode="wait">
                   {addingCart ? (
@@ -555,15 +535,15 @@ export default function ProductDetail() {
             </motion.div>
 
             {/* Trust badges */}
-            <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-100">
+            <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3 pt-4 border-t border-line">
               {[
                 { icon: <FiTruck size={16} />, text: 'Spedizione veloce' },
                 { icon: <FiRefreshCw size={16} />, text: 'Resi gratuiti' },
                 { icon: <FiShield size={16} />, text: 'Pagamento sicuro' },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex flex-col items-center gap-1.5 text-center">
-                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">{icon}</div>
-                  <span className="text-text-secondary text-xs font-body">{text}</span>
+                  <div className="w-8 h-8 rounded-full bg-sunken border border-line flex items-center justify-center text-muted">{icon}</div>
+                  <span className="text-muted text-xs font-body">{text}</span>
                 </div>
               ))}
             </motion.div>
@@ -572,18 +552,17 @@ export default function ProductDetail() {
 
         {/* ─── TABS ─────────────────────────────────────── */}
         <div className="mt-16">
-          <div className="flex gap-1 border-b border-gray-200 mb-8">
+          <div className="flex gap-1 border-b border-line mb-8">
             {['description', 'reviews', 'specifications'].map(t_val => (
               <motion.button
                 key={t_val}
                 onClick={() => setTab(t_val)}
                 className={`px-5 py-3 font-heading font-semibold text-sm transition-colors relative
-                  ${tab === t_val ? 'text-brand' : 'text-text-secondary hover:text-dark'}`}
-                whileTap={{ scale: 0.97 }}
+                  ${tab === t_val ? 'text-ink' : 'text-muted hover:text-ink'}`}
               >
                 {t_val === 'description' ? t('products.details') : t_val === 'reviews' ? `${t('products.reviews')} (${product.review_count || 0})` : t('products.specifications')}
                 {tab === t_val && (
-                  <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" layoutId="tabLine" />
+                  <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-ink" layoutId="tabLine" />
                 )}
               </motion.button>
             ))}
@@ -598,7 +577,7 @@ export default function ProductDetail() {
               transition={{ duration: 0.25 }}
             >
               {tab === 'description' && (
-                <div className="prose prose-slate max-w-none font-body text-text-secondary leading-relaxed">
+                <div className="prose prose-slate max-w-none font-body text-muted leading-relaxed">
                   <p>{product.description || product.short_description || 'Descrizione non disponibile'}</p>
                 </div>
               )}
@@ -607,7 +586,7 @@ export default function ProductDetail() {
                 <div className="space-y-6">
                   <ReviewForm productId={product.id} onSubmitted={() => { load(false); setTab('reviews'); }} />
                   {reviews.length === 0 ? (
-                    <p className="text-text-secondary text-center py-8">Ancora nessuna recensione. Sii il primo!</p>
+                    <p className="text-muted text-center py-8">Ancora nessuna recensione. Sii il primo!</p>
                   ) : (
                     reviews.map(review => (
                       <motion.div
@@ -618,17 +597,17 @@ export default function ProductDetail() {
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="font-heading font-semibold text-dark">{review.first_name} {review.last_name?.[0]}.</p>
+                            <p className="font-heading font-semibold text-ink">{review.first_name} {review.last_name?.[0]}.</p>
                             <div className="flex items-center gap-1 mt-1">
                               {[...Array(5)].map((_, i) => (
-                                <FiStar key={i} size={13} className={i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'} />
+                                <FiStar key={i} size={13} className={i < review.rating ? 'text-ink fill-current' : 'text-faint'} />
                               ))}
                             </div>
                           </div>
-                          <span className="text-text-secondary text-xs font-body">{formatDate(review.created_at)}</span>
+                          <span className="text-muted text-xs font-body">{formatDate(review.created_at)}</span>
                         </div>
-                        {review.title && <p className="font-heading font-semibold text-dark text-sm mt-3">{review.title}</p>}
-                        <p className="text-text-secondary text-sm mt-1 leading-relaxed">{review.content}</p>
+                        {review.title && <p className="font-heading font-semibold text-ink text-sm mt-3">{review.title}</p>}
+                        <p className="text-muted text-sm mt-1 leading-relaxed">{review.content}</p>
                       </motion.div>
                     ))
                   )}
@@ -643,9 +622,9 @@ export default function ProductDetail() {
                     { key: 'Peso', value: product.weight ? `${product.weight} kg` : null },
                     { key: 'Classe fiscale', value: product.tax_class },
                   ].filter(i => i.value).map(({ key, value }) => (
-                    <div key={key} className="flex items-center justify-between py-3 border-b border-gray-100">
-                      <span className="font-heading font-medium text-dark text-sm">{key}</span>
-                      <span className="text-text-secondary text-sm">{value}</span>
+                    <div key={key} className="flex items-center justify-between py-3 border-b border-line">
+                      <span className="font-heading font-medium text-ink text-sm">{key}</span>
+                      <span className="text-muted text-sm">{value}</span>
                     </div>
                   ))}
                 </div>

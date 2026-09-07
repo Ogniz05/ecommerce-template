@@ -39,11 +39,11 @@ export default function GiftCards() {
       <div className="container-app py-12 max-w-4xl">
 
         <motion.div className="text-center mb-10" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-full bg-ink flex items-center justify-center mx-auto mb-4">
             <FiGift size={28} className="text-white" />
           </div>
-          <h1 className="font-display font-bold text-4xl text-dark">Gift Card</h1>
-          <p className="text-text-secondary mt-2 font-body">Il regalo perfetto. Scegli l'importo, noi pensiamo al resto.</p>
+          <h1 className="font-display font-bold text-4xl text-ink">Gift Card</h1>
+          <p className="text-muted mt-2 font-body">Il regalo perfetto. Scegli l'importo, noi pensiamo al resto.</p>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -53,8 +53,8 @@ export default function GiftCards() {
               className="max-w-md mx-auto"
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
             >
-              <div className="rounded-3xl p-8 text-white text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #2C2E39, #4a4d5e)' }}>
-                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-brand/20" />
+              <div className="rounded-md p-8 text-white text-center relative overflow-hidden bg-ink">
+                
                 <div className="relative">
                   <FiCheck size={40} className="mx-auto mb-3 text-green-400" />
                   <p className="text-white/60 text-sm">Gift card da</p>
@@ -68,7 +68,7 @@ export default function GiftCards() {
                   </button>
                 </div>
               </div>
-              <p className="text-text-secondary text-sm text-center mt-5">
+              <p className="text-muted text-sm text-center mt-5">
                 {recipient ? `Inviata via email a ${recipient}.` : 'Conserva questo codice — usalo al checkout.'}
               </p>
               <button
@@ -85,7 +85,7 @@ export default function GiftCards() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             >
               {/* Preview card */}
-              <div className="rounded-3xl p-8 text-white relative overflow-hidden md:sticky md:top-24" style={{ background: 'linear-gradient(135deg, #D8125B, #7c3aed)' }}>
+              <div className="rounded-md p-8 text-white relative overflow-hidden md:sticky md:top-24 bg-ink">
                 <div className="absolute -bottom-10 -right-8 w-44 h-44 rounded-full bg-white/10" />
                 <div className="relative">
                   <FiGift size={32} className="mb-6" />
@@ -108,9 +108,8 @@ export default function GiftCards() {
                         key={a}
                         onClick={() => setAmount(a)}
                         className={`py-3 rounded-xl border-2 font-heading font-bold transition-all ${
-                          amount === a ? 'border-brand bg-brand/5 text-brand' : 'border-gray-200 text-dark hover:border-brand/40'
+                          amount === a ? 'border-ink bg-ink text-white' : 'border-line-strong text-ink hover:border-ink'
                         }`}
-                        whileTap={{ scale: 0.96 }}
                       >
                         {formatPrice(a)}
                       </motion.button>
@@ -119,9 +118,9 @@ export default function GiftCards() {
                 </div>
 
                 <div>
-                  <label className="label">Email destinatario <span className="text-text-secondary font-normal">(opzionale)</span></label>
+                  <label className="label">Email destinatario <span className="text-muted font-normal">(opzionale)</span></label>
                   <div className="relative">
-                    <FiMail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+                    <FiMail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                     <input
                       type="email"
                       value={recipient}
@@ -130,11 +129,11 @@ export default function GiftCards() {
                       className="input pl-10"
                     />
                   </div>
-                  <p className="text-text-secondary text-xs mt-1.5">Se vuoto, riceverai tu il codice.</p>
+                  <p className="text-muted text-xs mt-1.5">Se vuoto, riceverai tu il codice.</p>
                 </div>
 
                 <div>
-                  <label className="label">Messaggio <span className="text-text-secondary font-normal">(opzionale)</span></label>
+                  <label className="label">Messaggio <span className="text-muted font-normal">(opzionale)</span></label>
                   <textarea
                     value={message}
                     onChange={e => setMessage(e.target.value.slice(0, 200))}
@@ -142,21 +141,20 @@ export default function GiftCards() {
                     rows={3}
                     className="input resize-none"
                   />
-                  <p className="text-text-secondary text-xs mt-1.5 text-right">{message.length}/200</p>
+                  <p className="text-muted text-xs mt-1.5 text-right">{message.length}/200</p>
                 </div>
 
                 <motion.button
                   onClick={purchase}
                   disabled={loading}
                   className="btn btn-primary w-full py-4 flex items-center justify-center gap-2 font-heading font-semibold"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 >
                   {loading
                     ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     : <>Acquista Gift Card {formatPrice(amount)} <FiArrowRight size={16} /></>
                   }
                 </motion.button>
-                <p className="text-text-secondary text-xs text-center">Valida 1 anno dall'acquisto. Utilizzabile al checkout.</p>
+                <p className="text-muted text-xs text-center">Valida 1 anno dall'acquisto. Utilizzabile al checkout.</p>
               </div>
             </motion.div>
           )}

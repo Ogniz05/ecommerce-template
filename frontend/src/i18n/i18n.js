@@ -89,7 +89,7 @@ const resources = {
       },
       footer: {
         newsletter: 'Iscriviti alla Newsletter', newsletterSub: 'Ricevi offerte esclusive e novità',
-        subscribe: 'Iscriviti', copyright: '© 2026 YOUR NAME. Tutti i diritti riservati.',
+        subscribe: 'Iscriviti', copyright: '© 2026 Corso. Tutti i diritti riservati.',
         shop: 'Shop', info: 'Informazioni', support: 'Supporto',
         followUs: 'Seguici', paymentsMethods: 'Metodi di Pagamento'
       },
@@ -114,9 +114,17 @@ const resources = {
         name: 'Nome', email: 'Email', subject: 'Oggetto', message: 'Messaggio',
         send: 'Invia Messaggio', success: 'Messaggio inviato! Ti risponderemo presto.',
         info: 'Informazioni di Contatto', hours: 'Orari di Apertura',
-        followUs: 'Seguici sui Social'
+        followUs: 'Seguici sui Social',
+        formTitle: 'Scrivici', submit: 'Invia messaggio'
       },
-      faq: { title: 'Domande Frequenti', search: 'Cerca nelle FAQ', noResults: 'Nessun risultato' }
+      faq: {
+        title: 'Domande Frequenti',
+        subtitle: 'Le risposte alle domande che riceviamo più spesso su ordini, spedizioni e resi.',
+        search: 'Cerca nelle FAQ',
+        searchPlaceholder: 'Cerca una domanda',
+        allCategories: 'Tutte',
+        noResults: 'Nessun risultato'
+      }
     }
   },
   en: {
@@ -206,7 +214,7 @@ const resources = {
       },
       footer: {
         newsletter: 'Newsletter', newsletterSub: 'Get exclusive offers and news',
-        subscribe: 'Subscribe', copyright: '© 2026 YOUR NAME. All rights reserved.',
+        subscribe: 'Subscribe', copyright: '© 2026 Corso. All rights reserved.',
         shop: 'Shop', info: 'Information', support: 'Support',
         followUs: 'Follow Us', paymentsMethods: 'Payment Methods'
       },
@@ -231,9 +239,17 @@ const resources = {
         name: 'Name', email: 'Email', subject: 'Subject', message: 'Message',
         send: 'Send Message', success: 'Message sent! We\'ll get back to you soon.',
         info: 'Contact Information', hours: 'Business Hours',
-        followUs: 'Follow Us'
+        followUs: 'Follow Us',
+        formTitle: 'Write to us', submit: 'Send message'
       },
-      faq: { title: 'FAQ', search: 'Search FAQs', noResults: 'No results' }
+      faq: {
+        title: 'Frequently Asked Questions',
+        subtitle: 'Answers to the questions we get asked most about orders, shipping and returns.',
+        search: 'Search FAQs',
+        searchPlaceholder: 'Search a question',
+        allCategories: 'All',
+        noResults: 'No results'
+      }
     }
   }
 };

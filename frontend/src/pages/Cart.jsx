@@ -61,27 +61,14 @@ export default function Cart() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', damping: 20 }}
         >
-          <motion.div
-            className="w-32 h-32 rounded-[2rem] bg-gradient-to-br from-brand/12 to-purple-500/8 flex items-center justify-center mx-auto mb-7 relative"
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
-          >
-            <FiShoppingBag size={52} className="text-brand/40" />
-            <motion.div
-              className="absolute -top-2 -right-2 w-8 h-8 bg-brand rounded-full flex items-center justify-center"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring' }}
-            >
-              <span className="text-white text-xs font-bold">0</span>
-            </motion.div>
-          </motion.div>
-          <h1 className="font-display font-bold text-3xl text-dark mb-3">{t('cart.empty')}</h1>
-          <p className="text-text-secondary mb-8 font-body leading-relaxed">Il tuo carrello è vuoto. Esplora il catalogo e aggiungi quello che ti piace.</p>
+          <div className="w-14 h-14 rounded-full bg-sunken border border-line flex items-center justify-center mx-auto mb-6">
+            <FiShoppingBag size={22} className="text-muted" />
+          </div>
+          <h1 className="font-display text-3xl text-ink mb-3">{t('cart.empty')}</h1>
+          <p className="text-muted mb-8 font-body leading-relaxed">Il tuo carrello è vuoto. Esplora il catalogo e aggiungi quello che ti piace.</p>
           <Link to="/catalogo">
             <motion.button
               className="btn btn-primary px-10 py-3.5 flex items-center gap-2 mx-auto font-heading font-semibold"
-              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             >
               Sfoglia il catalogo <FiArrowRight size={16} />
             </motion.button>
@@ -92,7 +79,7 @@ export default function Cart() {
   }
 
   return (
-    <div className="page-wrapper bg-surface-2 min-h-screen">
+    <div className="page-wrapper bg-sunken min-h-screen">
       <div className="container-app py-10 max-w-6xl">
 
         {/* Header */}
@@ -102,16 +89,16 @@ export default function Cart() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div>
-            <h1 className="font-display font-bold text-3xl md:text-4xl text-dark">
+            <h1 className="font-display text-3xl md:text-4xl text-ink">
               {t('cart.title')}
             </h1>
-            <p className="text-text-secondary text-sm mt-1 font-body">
+            <p className="text-muted text-sm mt-1 font-body">
               {totalItems} {totalItems === 1 ? 'articolo' : 'articoli'} nel carrello
             </p>
           </div>
           <button
             onClick={() => { if (window.confirm('Svuotare il carrello?')) clearCart(); }}
-            className="text-text-secondary text-xs hover:text-red-500 transition-colors flex items-center gap-1.5 font-body"
+            className="text-muted text-xs hover:text-red-500 transition-colors flex items-center gap-1.5 font-body"
           >
             <FiTrash2 size={13} /> Svuota tutto
           </button>
@@ -119,7 +106,7 @@ export default function Cart() {
 
         {/* Free shipping progress bar */}
         <motion.div
-          className={`rounded-2xl p-4 mb-6 ${shipping === 0 ? 'bg-green-50 border border-green-100' : 'bg-white border border-gray-200/70'}`}
+          className={`rounded-2xl p-4 mb-6 ${shipping === 0 ? 'bg-green-50 border border-green-100' : 'bg-white border border-line/70'}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
@@ -127,17 +114,17 @@ export default function Cart() {
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
               <FiTruck size={15} className={shipping === 0 ? 'text-green-600' : 'text-brand'} />
-              <span className={`font-heading font-semibold text-sm ${shipping === 0 ? 'text-green-700' : 'text-dark'}`}>
+              <span className={`font-heading font-semibold text-sm ${shipping === 0 ? 'text-green-700' : 'text-ink'}`}>
                 {shipping === 0
-                  ? '🎉 Spedizione gratuita sbloccata!'
+                  ? 'Spedizione gratuita sbloccata'
                   : `Aggiungi ${formatPrice(amountLeft)} per la spedizione gratuita`}
               </span>
             </div>
-            <span className="text-text-secondary text-xs font-body">{formatPrice(subtotal)} / {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
+            <span className="text-muted text-xs font-body">{formatPrice(subtotal)} / {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-sunken rounded-full overflow-hidden">
             <motion.div
-              className={`h-full rounded-full ${shipping === 0 ? 'bg-green-500' : 'bg-gradient-to-r from-brand to-pink-400'}`}
+              className={`h-full rounded-full ${shipping === 0 ? 'bg-ink' : 'bg-brand'}`}
               initial={{ width: 0 }}
               animate={{ width: `${shippingProgress}%` }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -163,18 +150,16 @@ export default function Cart() {
                     layout
                     exit={{ opacity: 0, x: -60, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    className="bg-white rounded-2xl p-4 md:p-5 flex gap-4 group"
-                    style={{ border: '1px solid rgba(44,46,57,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}
-                    whileHover={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    className="bg-white rounded-md p-4 md:p-5 flex gap-4 group"
+                    style={{ border: '1px solid var(--line)' }}
                   >
                     {/* Image */}
                     <Link to={`/prodotti/${item.slug}`} className="flex-shrink-0">
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-xl overflow-hidden bg-gray-50 ring-1 ring-gray-200">
+                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-xl overflow-hidden bg-sunken ring-1 ring-line">
                         <motion.img
                           src={item.image_url || `https://picsum.photos/seed/${item.product_id}/200/200`}
                           alt={item.product_name}
                           className="w-full h-full object-cover"
-                          whileHover={{ scale: 1.06 }}
                           transition={{ duration: 0.35 }}
                         />
                       </div>
@@ -186,21 +171,19 @@ export default function Cart() {
                         <div className="min-w-0">
                           <Link
                             to={`/prodotti/${item.slug}`}
-                            className="font-heading font-semibold text-dark hover:text-brand transition-colors text-sm md:text-base line-clamp-2 leading-tight block"
+                            className="font-heading font-semibold text-ink hover:text-brand transition-colors text-sm md:text-base line-clamp-2 leading-tight block"
                           >
                             {item.product_name}
                           </Link>
                           {item.variant_name && (
-                            <span className="inline-flex items-center mt-1.5 text-[11px] font-body text-text-secondary bg-gray-100 px-2.5 py-0.5 rounded-full">
+                            <span className="inline-flex items-center mt-1.5 text-[11px] font-body text-muted bg-sunken px-2.5 py-0.5 rounded-full">
                               {item.variant_name}
                             </span>
                           )}
                         </div>
                         <motion.button
                           onClick={() => removeItem(item.id)}
-                          className="w-8 h-8 rounded-xl bg-transparent hover:bg-red-50 text-gray-300 hover:text-red-400 flex items-center justify-center transition-all flex-shrink-0"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.85 }}
+                          className="w-8 h-8 rounded-xl bg-transparent hover:bg-red-50 text-faint hover:text-red-400 flex items-center justify-center transition-all flex-shrink-0"
                           title="Rimuovi"
                         >
                           <FiX size={15} />
@@ -209,12 +192,11 @@ export default function Cart() {
 
                       <div className="flex items-center justify-between mt-3 md:mt-0">
                         {/* Qty controls */}
-                        <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1">
+                        <div className="flex items-center gap-1 bg-sunken border border-line rounded-xl p-1">
                           <motion.button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             disabled={item.quantity <= 1}
-                            className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-dark transition-all shadow-none hover:shadow-sm"
-                            whileTap={{ scale: 0.8 }}
+                            className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-ink transition-all shadow-none hover:shadow-sm"
                           >
                             <FiMinus size={12} />
                           </motion.button>
@@ -223,15 +205,14 @@ export default function Cart() {
                             initial={{ scale: 0.7, opacity: 0.5 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: 'spring', stiffness: 500 }}
-                            className="w-9 text-center font-heading font-bold text-dark text-sm"
+                            className="w-9 text-center font-heading font-bold text-ink text-sm"
                           >
                             {item.quantity}
                           </motion.span>
                           <motion.button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             disabled={item.quantity >= (item.stock || 99)}
-                            className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-dark transition-all hover:shadow-sm"
-                            whileTap={{ scale: 0.8 }}
+                            className="w-8 h-8 rounded-lg hover:bg-white disabled:opacity-30 flex items-center justify-center text-ink transition-all hover:shadow-sm"
                           >
                             <FiPlus size={12} />
                           </motion.button>
@@ -240,7 +221,7 @@ export default function Cart() {
                         {/* Line total */}
                         <div className="text-right">
                           {item.original_price && item.original_price > item.price && (
-                            <p className="text-text-secondary text-xs line-through font-body">
+                            <p className="text-muted text-xs line-through font-body">
                               {formatPrice(item.original_price * item.quantity)}
                             </p>
                           )}
@@ -253,7 +234,7 @@ export default function Cart() {
                             {formatPrice(item.price * item.quantity)}
                           </motion.p>
                           {item.quantity > 1 && (
-                            <p className="text-text-secondary text-[11px] font-body">{formatPrice(item.price)} cad.</p>
+                            <p className="text-muted text-[11px] font-body">{formatPrice(item.price)} cad.</p>
                           )}
                         </div>
                       </div>
@@ -301,12 +282,12 @@ export default function Cart() {
                 <div className="p-4">
                   <button
                     onClick={() => setCouponOpen(o => !o)}
-                    className="flex items-center gap-2 text-sm font-heading font-semibold text-dark hover:text-brand transition-colors w-full"
+                    className="flex items-center gap-2 text-sm font-heading font-semibold text-ink hover:text-brand transition-colors w-full"
                   >
                     <FiTag size={14} className="text-brand" />
                     Hai un codice sconto?
                     <motion.span
-                      className="ml-auto text-text-secondary"
+                      className="ml-auto text-muted"
                       animate={{ rotate: couponOpen ? 90 : 0 }}
                     >
                       <FiArrowRight size={13} />
@@ -335,7 +316,6 @@ export default function Cart() {
                             onClick={applyCoupon}
                             disabled={couponLoading || !coupon.trim()}
                             className="btn btn-primary px-4 py-2.5 text-sm disabled:opacity-50"
-                            whileTap={{ scale: 0.95 }}
                           >
                             {couponLoading
                               ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -352,12 +332,12 @@ export default function Cart() {
 
             {/* Order summary */}
             <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid rgba(44,46,57,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
-              <h3 className="font-heading font-bold text-dark mb-4 text-base">{t('checkout.orderSummary')}</h3>
+              <h3 className="font-heading font-bold text-ink mb-4 text-base">{t('checkout.orderSummary')}</h3>
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary font-body">{t('cart.subtotal')} ({totalItems} art.)</span>
-                  <span className="font-heading font-semibold text-dark">{formatPrice(subtotal)}</span>
+                  <span className="text-muted font-body">{t('cart.subtotal')} ({totalItems} art.)</span>
+                  <span className="font-heading font-semibold text-ink">{formatPrice(subtotal)}</span>
                 </div>
 
                 {discount > 0 && (
@@ -374,8 +354,8 @@ export default function Cart() {
                 )}
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary font-body">{t('cart.shipping')}</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-heading font-semibold text-xs' : 'text-dark font-body'}>
+                  <span className="text-muted font-body">{t('cart.shipping')}</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-heading font-semibold text-xs' : 'text-ink font-body'}>
                     {shipping === 0 ? '✓ Gratuita' : formatPrice(shipping)}
                   </span>
                 </div>
@@ -386,11 +366,11 @@ export default function Cart() {
                   </p>
                 )}
 
-                <div className="border-t border-gray-100 pt-3 mt-1">
+                <div className="border-t border-line pt-3 mt-1">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="font-heading font-bold text-dark">{t('cart.total')}</p>
-                      <p className="text-text-secondary text-[11px] font-body">{t('cart.tax')}</p>
+                      <p className="font-heading font-bold text-ink">{t('cart.total')}</p>
+                      <p className="text-muted text-[11px] font-body">{t('cart.tax')}</p>
                     </div>
                     <motion.span
                       key={total}
@@ -407,8 +387,6 @@ export default function Cart() {
               <motion.button
                 onClick={() => navigate('/checkout')}
                 className="btn btn-primary w-full py-4 mt-5 flex items-center justify-center gap-2 text-base font-heading font-semibold"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
               >
                 {t('cart.checkout')} <FiArrowRight size={17} />
               </motion.button>
@@ -423,7 +401,7 @@ export default function Cart() {
                 ].map(({ label, color }) => (
                   <div
                     key={label}
-                    className="px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200"
+                    className="px-2.5 py-1 rounded-lg bg-sunken border border-line"
                   >
                     <span className="text-[10px] font-mono font-bold" style={{ color }}>{label}</span>
                   </div>
@@ -440,8 +418,8 @@ export default function Cart() {
                       <Icon size={14} className="text-brand" />
                     </div>
                     <div>
-                      <p className="font-heading font-semibold text-dark text-xs leading-tight">{label}</p>
-                      <p className="text-text-secondary text-[11px] font-body">{sub}</p>
+                      <p className="font-heading font-semibold text-ink text-xs leading-tight">{label}</p>
+                      <p className="text-muted text-[11px] font-body">{sub}</p>
                     </div>
                   </div>
                 ))}

@@ -75,7 +75,7 @@ export default function OrderSuccess() {
           </motion.div>
 
           <motion.h1
-            className="font-display font-bold text-4xl text-dark mb-3"
+            className="font-display font-bold text-4xl text-ink mb-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -83,7 +83,7 @@ export default function OrderSuccess() {
             Ordine Confermato!
           </motion.h1>
           <motion.p
-            className="text-text-secondary"
+            className="text-muted"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -101,35 +101,35 @@ export default function OrderSuccess() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-text-secondary text-sm">Numero Ordine</p>
-              <p className="font-heading font-bold text-dark font-mono">#{order.order_number}</p>
+              <p className="text-muted text-sm">Numero Ordine</p>
+              <p className="font-heading font-bold text-ink font-mono">#{order.order_number}</p>
             </div>
             <div className="text-right">
-              <p className="text-text-secondary text-sm">Data</p>
-              <p className="font-heading font-semibold text-dark text-sm">
+              <p className="text-muted text-sm">Data</p>
+              <p className="font-heading font-semibold text-ink text-sm">
                 {new Date(order.created_at).toLocaleDateString('it-IT')}
               </p>
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-4 space-y-3">
+          <div className="border-t border-line pt-4 space-y-3">
             {items.map(item => (
               <div key={item.id} className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-sunken flex-shrink-0">
                   <img src={item.image_url || `https://picsum.photos/seed/${item.product_id}/100/100`} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-body text-sm text-dark font-medium truncate">{item.product_name}</p>
-                  {item.variant_name && <p className="text-text-secondary text-xs">{item.variant_name}</p>}
-                  <p className="text-text-secondary text-xs">Qtà: {item.quantity}</p>
+                  <p className="font-body text-sm text-ink font-medium truncate">{item.product_name}</p>
+                  {item.variant_name && <p className="text-muted text-xs">{item.variant_name}</p>}
+                  <p className="text-muted text-xs">Qtà: {item.quantity}</p>
                 </div>
-                <span className="font-heading font-semibold text-dark text-sm">{formatPrice(item.total_price)}</span>
+                <span className="font-heading font-semibold text-ink text-sm">{formatPrice(item.total_price)}</span>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-gray-100 pt-4 mt-4 space-y-1.5">
-            <div className="flex justify-between text-sm text-text-secondary">
+          <div className="border-t border-line pt-4 mt-4 space-y-1.5">
+            <div className="flex justify-between text-sm text-muted">
               <span>Subtotale</span><span>{formatPrice(order.subtotal)}</span>
             </div>
             {parseFloat(order.discount_amount) > 0 && (
@@ -137,16 +137,16 @@ export default function OrderSuccess() {
                 <span>Sconto</span><span>-{formatPrice(order.discount_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm text-text-secondary">
+            <div className="flex justify-between text-sm text-muted">
               <span>Spedizione</span>
               <span>{order.shipping_cost > 0 ? formatPrice(order.shipping_cost) : <span className="text-green-600">Gratuita</span>}</span>
             </div>
             {parseFloat(order.tax_amount) > 0 && (
-              <div className="flex justify-between text-sm text-text-secondary">
+              <div className="flex justify-between text-sm text-muted">
                 <span>IVA</span><span>{formatPrice(order.tax_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-heading font-bold text-dark pt-1">
+            <div className="flex justify-between font-heading font-bold text-ink pt-1">
               <span>Totale</span>
               <span className="text-brand text-lg">{formatPrice(order.total_amount)}</span>
             </div>
@@ -161,10 +161,10 @@ export default function OrderSuccess() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <h3 className="font-heading font-semibold text-dark mb-3 flex items-center gap-2">
+            <h3 className="font-heading font-semibold text-ink mb-3 flex items-center gap-2">
               <FiPackage size={15} /> Indirizzo di Consegna
             </h3>
-            <div className="text-text-secondary text-sm space-y-0.5">
+            <div className="text-muted text-sm space-y-0.5">
               <p>{order.shipping_address.first_name} {order.shipping_address.last_name}</p>
               <p>{order.shipping_address.address_line1}</p>
               <p>{order.shipping_address.city}, {order.shipping_address.postal_code}</p>
@@ -187,8 +187,6 @@ export default function OrderSuccess() {
           <Link to="/catalogo" className="flex-1">
             <motion.button
               className="btn btn-primary w-full py-3 flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
             >
               Continua gli Acquisti <FiArrowRight size={15} />
             </motion.button>

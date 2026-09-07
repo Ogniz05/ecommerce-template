@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_NAME = 'ShopTemplate';
+// [CUSTOMIZE] Site name used in the browser tab and social cards.
+const SITE_NAME = 'Corso';
 const DEFAULT_DESC = 'Scopri la nostra selezione di prodotti premium. Spedizione rapida, resi gratuiti, pagamenti sicuri.';
 const DEFAULT_IMAGE = '/og-image.jpg';
 

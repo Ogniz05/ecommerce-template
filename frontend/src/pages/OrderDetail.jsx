@@ -97,11 +97,11 @@ export default function OrderDetail() {
 
   if (!order) return (
     <div className="page-wrapper container-app py-20 text-center">
-      <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-        <FiPackage size={32} className="text-gray-400" />
+      <div className="w-20 h-20 rounded-3xl bg-sunken flex items-center justify-center mx-auto mb-4">
+        <FiPackage size={32} className="text-muted" />
       </div>
-      <h1 className="font-display font-bold text-2xl text-dark mb-2">Ordine non trovato</h1>
-      <p className="text-text-secondary mb-6">Questo ordine non esiste o non ti appartiene.</p>
+      <h1 className="font-display font-bold text-2xl text-ink mb-2">Ordine non trovato</h1>
+      <p className="text-muted mb-6">Questo ordine non esiste o non ti appartiene.</p>
       <Link to="/profilo/ordini"><button className="btn btn-primary">I miei ordini</button></Link>
     </div>
   );
@@ -117,26 +117,26 @@ export default function OrderDetail() {
       <div className="container-app py-10 max-w-5xl">
         {/* Breadcrumb */}
         <motion.nav
-          className="flex items-center gap-2 text-sm text-text-secondary mb-6 font-body"
+          className="flex items-center gap-2 text-sm text-muted mb-6 font-body"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         >
           <Link to="/profilo" className="hover:text-brand transition-colors">Profilo</Link>
           <FiChevronRight size={13} />
           <Link to="/profilo/ordini" className="hover:text-brand transition-colors">Ordini</Link>
           <FiChevronRight size={13} />
-          <span className="text-dark font-medium font-mono">#{order.order_number}</span>
+          <span className="text-ink font-medium font-mono">#{order.order_number}</span>
         </motion.nav>
 
         {/* Header */}
         <motion.div className="flex flex-wrap items-center gap-3 mb-8" variants={fadeInUp} initial="hidden" animate="visible">
-          <button onClick={() => navigate('/profilo/ordini')} className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-dark transition-colors">
+          <button onClick={() => navigate('/profilo/ordini')} className="w-10 h-10 rounded-xl bg-sunken hover:bg-gray-200 flex items-center justify-center text-ink transition-colors">
             <FiArrowLeft size={17} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-dark">
+            <h1 className="font-display font-bold text-2xl md:text-3xl text-ink">
               Ordine <span className="font-mono text-brand">#{order.order_number}</span>
             </h1>
-            <p className="text-text-secondary text-sm flex items-center gap-1.5 mt-1">
+            <p className="text-muted text-sm flex items-center gap-1.5 mt-1">
               <FiClock size={13} /> {new Date(order.created_at).toLocaleString('it-IT')}
             </p>
           </div>
@@ -176,14 +176,14 @@ export default function OrderDetail() {
                   <div key={step.key} className="relative z-10 flex flex-col items-center gap-2 flex-1">
                     <motion.div
                       className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
-                        ${done ? 'bg-brand border-brand text-white' : 'bg-white border-gray-200 text-gray-300'}`}
+                        ${done ? 'bg-brand border-brand text-white' : 'bg-white border-line text-faint'}`}
                       initial={{ scale: 0.8 }}
                       animate={{ scale: done ? 1 : 0.85 }}
                       transition={{ delay: 0.2 + i * 0.1, type: 'spring', stiffness: 300 }}
                     >
                       <Icon size={16} />
                     </motion.div>
-                    <span className={`text-xs font-heading font-medium text-center ${done ? 'text-dark' : 'text-text-secondary'}`}>
+                    <span className={`text-xs font-heading font-medium text-center ${done ? 'text-ink' : 'text-muted'}`}>
                       {step.label}
                     </span>
                   </div>
@@ -191,9 +191,9 @@ export default function OrderDetail() {
               })}
             </div>
             {order.tracking_number && (
-              <div className="mt-5 pt-4 border-t border-gray-100 text-sm text-text-secondary flex items-center gap-2">
+              <div className="mt-5 pt-4 border-t border-line text-sm text-muted flex items-center gap-2">
                 <FiTruck size={14} className="text-brand" />
-                Tracking: <span className="font-mono text-dark">{order.tracking_number}</span>
+                Tracking: <span className="font-mono text-ink">{order.tracking_number}</span>
               </div>
             )}
           </motion.div>
@@ -205,27 +205,27 @@ export default function OrderDetail() {
             className="lg:col-span-2 card overflow-hidden h-fit"
             variants={staggerContainer} initial="hidden" animate="visible"
           >
-            <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+            <div className="p-4 border-b border-line flex items-center gap-2">
               <FiPackage size={15} className="text-brand" />
-              <h3 className="font-heading font-bold text-dark text-sm">Articoli ({items.length})</h3>
+              <h3 className="font-heading font-bold text-ink text-sm">Articoli ({items.length})</h3>
             </div>
             <div className="divide-y divide-gray-50">
               {items.map(it => (
                 <motion.div key={it.id} variants={staggerItem} className="flex items-center gap-3 p-4">
-                  <Link to={it.slug ? `/prodotti/${it.slug}` : '#'} className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                  <Link to={it.slug ? `/prodotti/${it.slug}` : '#'} className="w-14 h-14 rounded-xl overflow-hidden bg-sunken flex-shrink-0">
                     <img src={it.image_url || `https://picsum.photos/seed/${it.product_id}/100`} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform" />
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <Link to={it.slug ? `/prodotti/${it.slug}` : '#'} className="font-body text-sm text-dark font-medium hover:text-brand transition-colors line-clamp-1">
+                    <Link to={it.slug ? `/prodotti/${it.slug}` : '#'} className="font-body text-sm text-ink font-medium hover:text-brand transition-colors line-clamp-1">
                       {it.product_name}
                     </Link>
-                    {it.variant_name && <p className="text-text-secondary text-xs">{it.variant_name}</p>}
-                    <p className="text-text-secondary text-xs">{money(it.unit_price)} × {it.quantity}</p>
+                    {it.variant_name && <p className="text-muted text-xs">{it.variant_name}</p>}
+                    <p className="text-muted text-xs">{money(it.unit_price)} × {it.quantity}</p>
                   </div>
-                  <span className="font-heading font-semibold text-dark text-sm">{money(it.total_price)}</span>
+                  <span className="font-heading font-semibold text-ink text-sm">{money(it.total_price)}</span>
                 </motion.div>
               ))}
-              {!items.length && <p className="p-4 text-text-secondary text-sm">Nessun articolo</p>}
+              {!items.length && <p className="p-4 text-muted text-sm">Nessun articolo</p>}
             </div>
           </motion.div>
 
@@ -233,37 +233,37 @@ export default function OrderDetail() {
           <div className="space-y-6">
             {/* Shipping address */}
             <motion.div className="card p-4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
-              <h3 className="font-heading font-bold text-dark text-sm mb-3 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-ink text-sm mb-3 flex items-center gap-2">
                 <FiMapPin size={15} className="text-brand" /> Spedizione
               </h3>
-              <div className="text-sm text-dark space-y-0.5">
+              <div className="text-sm text-ink space-y-0.5">
                 <p className="font-medium">{addr.first_name} {addr.last_name}</p>
-                {addr.address_line1 && <p className="text-text-secondary">{addr.address_line1}</p>}
-                {addr.address_line2 && <p className="text-text-secondary">{addr.address_line2}</p>}
-                <p className="text-text-secondary">{[addr.postal_code, addr.city, addr.state].filter(Boolean).join(' ')}</p>
-                {addr.country && <p className="text-text-secondary">{addr.country}</p>}
-                {!addr.address_line1 && !addr.city && <p className="text-text-secondary italic">Nessun indirizzo</p>}
+                {addr.address_line1 && <p className="text-muted">{addr.address_line1}</p>}
+                {addr.address_line2 && <p className="text-muted">{addr.address_line2}</p>}
+                <p className="text-muted">{[addr.postal_code, addr.city, addr.state].filter(Boolean).join(' ')}</p>
+                {addr.country && <p className="text-muted">{addr.country}</p>}
+                {!addr.address_line1 && !addr.city && <p className="text-muted italic">Nessun indirizzo</p>}
               </div>
             </motion.div>
 
             {/* Totals */}
             <motion.div className="card p-4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-              <h3 className="font-heading font-bold text-dark text-sm mb-3 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-ink text-sm mb-3 flex items-center gap-2">
                 <FiCreditCard size={15} className="text-brand" /> Riepilogo
               </h3>
               <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between text-text-secondary"><span>Subtotale</span><span>{money(order.subtotal)}</span></div>
+                <div className="flex justify-between text-muted"><span>Subtotale</span><span>{money(order.subtotal)}</span></div>
                 {parseFloat(order.discount_amount) > 0 && (
                   <div className="flex justify-between text-green-600"><span>Sconto {order.coupon_code ? `(${order.coupon_code})` : ''}</span><span>-{money(order.discount_amount)}</span></div>
                 )}
-                <div className="flex justify-between text-text-secondary"><span>Spedizione</span><span>{parseFloat(order.shipping_cost) > 0 ? money(order.shipping_cost) : 'Gratuita'}</span></div>
-                <div className="flex justify-between text-text-secondary"><span>IVA</span><span>{money(order.tax_amount)}</span></div>
-                <div className="flex justify-between font-heading font-bold text-dark border-t border-gray-100 pt-2 mt-1">
+                <div className="flex justify-between text-muted"><span>Spedizione</span><span>{parseFloat(order.shipping_cost) > 0 ? money(order.shipping_cost) : 'Gratuita'}</span></div>
+                <div className="flex justify-between text-muted"><span>IVA</span><span>{money(order.tax_amount)}</span></div>
+                <div className="flex justify-between font-heading font-bold text-ink border-t border-line pt-2 mt-1">
                   <span>Totale</span><span className="text-brand text-base">{money(order.total_amount)}</span>
                 </div>
               </div>
               {order.payment_method && (
-                <p className="text-text-secondary text-xs mt-3 capitalize">Pagamento: {order.payment_method} · {order.payment_status === 'paid' ? 'Pagato' : 'In attesa'}</p>
+                <p className="text-muted text-xs mt-3 capitalize">Pagamento: {order.payment_method} · {order.payment_status === 'paid' ? 'Pagato' : 'In attesa'}</p>
               )}
             </motion.div>
 
@@ -288,7 +288,7 @@ export default function OrderDetail() {
               <button
                 onClick={cancelOrder}
                 disabled={cancelling}
-                className="w-full py-3 text-sm font-heading font-semibold rounded-xl border border-gray-200 text-text-secondary hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 text-sm font-heading font-semibold rounded-xl border border-line text-muted hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {cancelling ? <span className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" /> : <FiX size={14} />}
                 Annulla Ordine
@@ -299,7 +299,7 @@ export default function OrderDetail() {
             {order.status === 'delivered' && !returnReq && (
               <button
                 onClick={() => setShowReturnModal(true)}
-                className="w-full py-3 text-sm font-heading font-semibold rounded-xl border border-gray-200 text-text-secondary hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 text-sm font-heading font-semibold rounded-xl border border-line text-muted hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
               >
                 <FiRotateCcw size={14} /> Richiedi reso
               </button>
@@ -311,11 +311,11 @@ export default function OrderDetail() {
                 className="card p-4 border border-dashed"
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               >
-                <h3 className="font-heading font-bold text-dark text-sm mb-2 flex items-center gap-2">
+                <h3 className="font-heading font-bold text-ink text-sm mb-2 flex items-center gap-2">
                   <FiRotateCcw size={14} className="text-brand" /> Stato Reso
                 </h3>
                 <div className="space-y-1 text-sm">
-                  <p className="text-text-secondary capitalize">Motivo: {RETURN_REASONS.find(r => r.value === returnReq.reason)?.label || returnReq.reason}</p>
+                  <p className="text-muted capitalize">Motivo: {RETURN_REASONS.find(r => r.value === returnReq.reason)?.label || returnReq.reason}</p>
                   {returnReq.refund_amount && returnReq.status === 'refunded' && (
                     <p className="text-green-700 font-semibold">Rimborsato: {formatPrice(parseFloat(returnReq.refund_amount))}</p>
                   )}
@@ -342,35 +342,35 @@ export default function OrderDetail() {
               initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
             >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-display font-bold text-dark text-lg">Richiedi Reso</h2>
-                <button onClick={() => setShowReturnModal(false)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                <h2 className="font-display font-bold text-ink text-lg">Richiedi Reso</h2>
+                <button onClick={() => setShowReturnModal(false)} className="w-8 h-8 rounded-lg bg-sunken hover:bg-gray-200 flex items-center justify-center transition-colors">
                   <FiX size={15} />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-heading font-medium text-dark mb-1.5">Motivo *</label>
+                  <label className="block text-sm font-heading font-medium text-ink mb-1.5">Motivo *</label>
                   <select
                     value={returnForm.reason}
                     onChange={e => setReturnForm(f => ({ ...f, reason: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
+                    className="w-full border border-line rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors"
                   >
                     <option value="">Seleziona un motivo…</option>
                     {RETURN_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-heading font-medium text-dark mb-1.5">Descrizione (opzionale)</label>
+                  <label className="block text-sm font-heading font-medium text-ink mb-1.5">Descrizione (opzionale)</label>
                   <textarea
                     value={returnForm.description}
                     onChange={e => setReturnForm(f => ({ ...f, description: e.target.value }))}
                     rows={3}
                     placeholder="Descrivi il problema…"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors resize-none"
+                    className="w-full border border-line rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand transition-colors resize-none"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={() => setShowReturnModal(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-heading font-semibold text-text-secondary hover:bg-gray-50 transition-colors">
+                  <button onClick={() => setShowReturnModal(false)} className="flex-1 py-3 rounded-xl border border-line text-sm font-heading font-semibold text-muted hover:bg-sunken transition-colors">
                     Annulla
                   </button>
                   <button

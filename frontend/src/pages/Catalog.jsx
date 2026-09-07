@@ -2,23 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { FiFilter, FiX, FiGrid, FiList, FiChevronDown, FiSearch } from 'react-icons/fi';
+import { FiFilter, FiX, FiChevronDown, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import api from '../utils/api';
-import { staggerContainer, fadeInUp } from '../utils/animations';
 
 // Defined at module level: an inline component would be recreated on every
 // render, remounting the price inputs and dropping focus while typing.
 function Filters({ t, category, categories, updateParam, priceMin, setPriceMin, priceMax, setPriceMax, fetchProducts }) {
+  const rowBase = 'w-full text-left py-1.5 text-sm transition-colors';
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-heading font-semibold text-dark text-sm uppercase tracking-wider mb-3">{t('products.allCategories')}</h3>
-        <div className="space-y-1">
+    <div className="space-y-8">
+      <section>
+        <h3 className="eyebrow text-muted mb-3">{t('products.allCategories')}</h3>
+        <div>
           <button
             onClick={() => updateParam('category', '')}
-            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-body transition-colors ${!category ? 'bg-brand/10 text-brand font-medium' : 'text-text-secondary hover:bg-gray-50 hover:text-dark'}`}
+            className={`${rowBase} ${!category ? 'text-ink font-semibold' : 'text-body hover:text-ink'}`}
           >
             {t('products.allCategories')}
           </button>
@@ -26,7 +27,7 @@ function Filters({ t, category, categories, updateParam, priceMin, setPriceMin, 
             <div key={cat.id}>
               <button
                 onClick={() => updateParam('category', cat.slug)}
-                className={`w-full text-left px-3 py-2 rounded-xl text-sm font-body transition-colors ${category === cat.slug ? 'bg-brand/10 text-brand font-medium' : 'text-text-secondary hover:bg-gray-50 hover:text-dark'}`}
+                className={`${rowBase} ${category === cat.slug ? 'text-ink font-semibold' : 'text-body hover:text-ink'}`}
               >
                 {cat.display_name || cat.name}
               </button>
@@ -34,7 +35,7 @@ function Filters({ t, category, categories, updateParam, priceMin, setPriceMin, 
                 <button
                   key={sub.id}
                   onClick={() => updateParam('category', sub.slug)}
-                  className={`w-full text-left pl-6 pr-3 py-1.5 rounded-xl text-xs font-body transition-colors ${category === sub.slug ? 'text-brand font-medium' : 'text-text-secondary hover:text-dark'}`}
+                  className={`${rowBase} pl-4 text-[13px] ${category === sub.slug ? 'text-ink font-semibold' : 'text-muted hover:text-ink'}`}
                 >
                   {sub.display_name || sub.name}
                 </button>
@@ -42,28 +43,39 @@ function Filters({ t, category, categories, updateParam, priceMin, setPriceMin, 
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div>
-        <h3 className="font-heading font-semibold text-dark text-sm uppercase tracking-wider mb-3">Prezzo</h3>
+      <section className="pt-8 border-t border-line">
+        <h3 className="eyebrow text-muted mb-3">Prezzo</h3>
         <div className="flex items-center gap-2">
-          <input type="number" placeholder="Min €" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="input text-sm py-2" />
-          <span className="text-text-secondary">-</span>
-          <input type="number" placeholder="Max €" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="input text-sm py-2" />
+          <input
+            type="number"
+            placeholder="Min €"
+            value={priceMin}
+            onChange={e => setPriceMin(e.target.value)}
+            className="input text-sm"
+          />
+          <span className="text-faint">–</span>
+          <input
+            type="number"
+            placeholder="Max €"
+            value={priceMax}
+            onChange={e => setPriceMax(e.target.value)}
+            className="input text-sm"
+          />
         </div>
-        <motion.button
-          onClick={fetchProducts}
-          className="btn btn-primary w-full mt-3 text-sm py-2.5"
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-        >
+        <button onClick={fetchProducts} className="btn btn-outline btn-sm w-full mt-3">
           {t('products.apply')}
-        </motion.button>
+        </button>
         {(priceMin || priceMax) && (
-          <button onClick={() => { setPriceMin(''); setPriceMax(''); }} className="w-full text-center text-text-secondary text-xs mt-2 hover:text-dark">
+          <button
+            onClick={() => { setPriceMin(''); setPriceMax(''); }}
+            className="w-full text-muted text-xs mt-2 hover:text-ink transition-colors"
+          >
             Rimuovi filtro prezzo
           </button>
         )}
-      </div>
+      </section>
     </div>
   );
 }
@@ -131,176 +143,176 @@ export default function Catalog() {
     updateParam('search', localSearch);
   };
 
+  const activeCategory = categories
+    .flatMap(c => [c, ...(c.children || [])])
+    .find(c => c.slug === category);
+
   const filtersProps = { t, category, categories, updateParam, priceMin, setPriceMin, priceMax, setPriceMax, fetchProducts };
 
   return (
     <div className="page-wrapper">
       <SEO
         title={search ? `Ricerca: ${search}` : 'Catalogo'}
-        description="Sfoglia il nostro catalogo completo. Filtra per categoria, prezzo e altro."
+        description="Sfoglia il catalogo completo. Filtra per categoria, prezzo e disponibilità."
       />
-      {/* Page banner */}
-      <div className="relative bg-dark overflow-hidden -mt-20 pt-20">
-        <div className="absolute inset-0 opacity-25" style={{
-          backgroundImage: 'radial-gradient(ellipse 50% 80% at 80% 50%, rgba(216,18,91,0.5) 0%, transparent 100%)'
-        }} />
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundSize: '48px 48px',
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)'
-        }} />
-        <div className="container-app relative z-10 py-14">
-          <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-            <span className="text-brand-light font-heading font-semibold text-xs uppercase tracking-widest">Shop</span>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mt-2">{t('nav.catalog')}</h1>
-            {search && (
-              <p className="text-white/60 mt-3">
-                Risultati per: <strong className="text-white">"{search}"</strong>
-                <button onClick={() => updateParam('search', '')} className="ml-2 text-brand-light hover:underline text-sm">
-                  Cancella
-                </button>
-              </p>
-            )}
-          </motion.div>
-        </div>
-      </div>
 
-      <div className="container-app py-10">
-
-        {/* Search + Sort bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 min-w-48 max-w-sm">
-            <div className="relative flex-1">
-              <FiSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-              <input
-                type="text"
-                value={localSearch}
-                onChange={e => setLocalSearch(e.target.value)}
-                placeholder={t('products.search')}
-                className="input pl-9 text-sm py-2.5"
-              />
-            </div>
-          </form>
-
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Sort */}
-            <div className="relative">
-              <select
-                value={sort}
-                onChange={e => updateParam('sort', e.target.value)}
-                className="input text-sm py-2.5 pr-8 appearance-none cursor-pointer min-w-36"
-              >
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.labelKey)}</option>)}
-              </select>
-              <FiChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
-            </div>
-
-            {/* Mobile filter toggle */}
-            <motion.button
-              onClick={() => setFiltersOpen(true)}
-              className="btn btn-outline text-sm py-2.5 px-4 flex items-center gap-2 lg:hidden"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+      <header className="container-app pt-12 pb-8 md:pt-16 md:pb-10">
+        <p className="eyebrow text-muted">Shop</p>
+        <h1 className="display-lg mt-2">
+          {activeCategory ? (activeCategory.display_name || activeCategory.name) : t('nav.catalog')}
+        </h1>
+        {search && (
+          <p className="text-body mt-3">
+            Risultati per <span className="text-ink font-semibold">“{search}”</span>
+            <button
+              onClick={() => { setLocalSearch(''); updateParam('search', ''); }}
+              className="ml-3 text-muted hover:text-ink underline underline-offset-4 text-sm transition-colors"
             >
-              <FiFilter size={15} /> Filtri
-            </motion.button>
-          </div>
-        </div>
+              cancella
+            </button>
+          </p>
+        )}
+      </header>
 
-        <div className="flex gap-8">
-          {/* Sidebar filters - desktop */}
-          <motion.aside
-            className="w-64 flex-shrink-0 hidden lg:block"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="sticky top-24 card p-5">
+      <div className="container-app pb-24">
+        <div className="flex flex-col lg:flex-row gap-10 xl:gap-14">
+
+          <aside className="w-full lg:w-56 shrink-0 hidden lg:block">
+            <div className="sticky top-24">
               <Filters {...filtersProps} />
             </div>
-          </motion.aside>
+          </aside>
 
-          {/* Products grid */}
           <div className="flex-1 min-w-0">
-            {/* Count */}
-            <p className="text-text-secondary text-sm mb-5 font-body">
-              {pagination.total || 0} prodotti trovati
-            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pb-5 mb-8 border-b border-line">
+              <form onSubmit={handleSearch} className="relative flex-1 min-w-[200px] max-w-sm">
+                <FiSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  value={localSearch}
+                  onChange={e => setLocalSearch(e.target.value)}
+                  placeholder={t('products.search')}
+                  className="input pl-9 text-sm"
+                />
+              </form>
+
+              <p className="text-muted text-sm tnum order-last w-full sm:order-none sm:w-auto">
+                {pagination.total || 0} prodotti
+              </p>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="relative">
+                  <select
+                    value={sort}
+                    onChange={e => updateParam('sort', e.target.value)}
+                    className="input text-sm pr-9 appearance-none cursor-pointer min-w-[150px]"
+                    aria-label="Ordina"
+                  >
+                    {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.labelKey)}</option>)}
+                  </select>
+                  <FiChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                </div>
+
+                <button onClick={() => setFiltersOpen(true)} className="btn btn-outline btn-sm lg:hidden">
+                  <FiFilter size={15} /> Filtri
+                </button>
+              </div>
+            </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
                 {[...Array(12)].map((_, i) => (
-                  <div key={i} className="rounded-2xl overflow-hidden">
-                    <div className="aspect-square skeleton" />
-                    <div className="p-4 space-y-2">
-                      <div className="h-3 skeleton rounded w-16" />
-                      <div className="h-4 skeleton rounded w-full" />
-                      <div className="h-5 skeleton rounded w-20 mt-2" />
+                  <div key={i}>
+                    <div className="aspect-[4/5] skeleton rounded-md" />
+                    <div className="pt-3 space-y-2">
+                      <div className="h-2.5 skeleton rounded w-16" />
+                      <div className="h-3.5 skeleton rounded w-full" />
+                      <div className="h-3.5 skeleton rounded w-16" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : products.length === 0 ? (
-              <motion.div
-                className="text-center py-20"
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              >
-                <div className="w-20 h-20 rounded-3xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <FiSearch size={28} className="text-gray-400" />
-                </div>
-                <h3 className="font-heading font-semibold text-dark text-lg mb-2">{t('products.noProducts')}</h3>
-                <button onClick={() => setSearchParams({})} className="text-brand hover:underline text-sm mt-2">
+              <div className="py-24 text-center border border-line rounded-md">
+                <h3 className="font-heading font-semibold text-ink text-lg">{t('products.noProducts')}</h3>
+                <p className="text-muted text-sm mt-1.5">Prova a rimuovere qualche filtro.</p>
+                <button
+                  onClick={() => { setLocalSearch(''); setPriceMin(''); setPriceMax(''); setSearchParams({}); }}
+                  className="btn btn-outline btn-sm mt-5"
+                >
                   Rimuovi tutti i filtri
                 </button>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-              >
-                {products.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
-              </motion.div>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                {products.map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
             )}
 
-            {/* Pagination */}
             {pagination.pages > 1 && (
-              <motion.div
-                className="flex justify-center items-center gap-2 mt-10"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              >
+              <nav className="flex justify-center items-center gap-1 mt-16" aria-label="Paginazione">
+                <button
+                  onClick={() => updateParam('page', String(page - 1))}
+                  disabled={page <= 1}
+                  className="w-9 h-9 flex items-center justify-center rounded-md text-ink hover:bg-sunken
+                             disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  aria-label="Pagina precedente"
+                >
+                  <FiChevronLeft size={16} />
+                </button>
+
                 {[...Array(pagination.pages)].map((_, i) => (
-                  <motion.button
+                  <button
                     key={i}
                     onClick={() => updateParam('page', String(i + 1))}
-                    className={`w-10 h-10 rounded-xl font-heading font-semibold text-sm transition-all
-                      ${page === i + 1 ? 'bg-brand text-white shadow-brand' : 'bg-white border border-gray-200 text-dark hover:border-brand hover:text-brand'}`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    aria-current={page === i + 1 ? 'page' : undefined}
+                    className={`w-9 h-9 rounded-md font-heading text-sm tnum transition-colors
+                      ${page === i + 1 ? 'bg-ink text-white font-semibold' : 'text-body hover:bg-sunken'}`}
                   >
                     {i + 1}
-                  </motion.button>
+                  </button>
                 ))}
-              </motion.div>
+
+                <button
+                  onClick={() => updateParam('page', String(page + 1))}
+                  disabled={page >= pagination.pages}
+                  className="w-9 h-9 flex items-center justify-center rounded-md text-ink hover:bg-sunken
+                             disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  aria-label="Pagina successiva"
+                >
+                  <FiChevronRight size={16} />
+                </button>
+              </nav>
             )}
           </div>
         </div>
       </div>
 
-      {/* Mobile filter drawer */}
       <AnimatePresence>
         {filtersOpen && (
           <>
-            <motion.div className="fixed inset-0 bg-dark/40 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setFiltersOpen(false)} />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto"
+              className="fixed inset-0 bg-ink/30 z-40"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={() => setFiltersOpen(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 inset-x-0 bg-white z-50 rounded-t-lg p-6 max-h-[82vh] overflow-y-auto border-t border-line"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              transition={{ duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
             >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="font-heading font-bold text-dark text-lg">Filtri</h3>
-                <button onClick={() => setFiltersOpen(false)}><FiX size={20} /></button>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-heading font-semibold text-ink text-base">Filtri</h3>
+                <button onClick={() => setFiltersOpen(false)} aria-label="Chiudi filtri" className="text-ink">
+                  <FiX size={20} />
+                </button>
               </div>
               <Filters {...filtersProps} />
+              <button onClick={() => setFiltersOpen(false)} className="btn btn-primary w-full mt-8">
+                Mostra {pagination.total || 0} prodotti
+              </button>
             </motion.div>
           </>
         )}

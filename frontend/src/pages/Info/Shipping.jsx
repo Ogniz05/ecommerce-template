@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { FiTruck, FiRefreshCw, FiPackage, FiClock } from 'react-icons/fi';
+import { FiTruck, FiRefreshCw, FiPackage, FiClock, FiZap } from 'react-icons/fi';
 import { staggerContainer, staggerItem } from '../../utils/animations';
 
 const SHIPPING_METHODS = [
@@ -10,7 +10,7 @@ const SHIPPING_METHODS = [
     days: '3-5 giorni',
     price: '€4,99',
     free: 'Gratuita sopra €50',
-    icon: '📦',
+    icon: FiPackage,
     desc: 'Spedizione tracciata con BRT o GLS'
   },
   {
@@ -18,7 +18,7 @@ const SHIPPING_METHODS = [
     days: '1-2 giorni',
     price: '€9,99',
     free: 'Gratuita sopra €150',
-    icon: '⚡',
+    icon: FiZap,
     desc: 'Corriere espresso DHL o TNT'
   },
   {
@@ -26,7 +26,7 @@ const SHIPPING_METHODS = [
     days: 'Stesso giorno',
     price: '€14,99',
     free: null,
-    icon: '🚀',
+    icon: FiTruck,
     desc: 'Milano e Roma. Ordina entro le 12:00'
   },
 ];
@@ -43,23 +43,17 @@ export default function Shipping() {
 
   return (
     <div className="page-wrapper">
-      {/* Hero */}
-      <section className="bg-dark py-20 relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-brand/20 blur-3xl" />
-        <div className="container-app relative text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="font-display font-bold text-5xl text-white mb-4">
-              {t('shipping.title')}
-            </h1>
-            <p className="text-white/60 text-lg max-w-xl mx-auto">
-              Consegna rapida, resi semplici. La tua soddisfazione è garantita.
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <header className="container-app pt-12 pb-10 md:pt-16 md:pb-12 max-w-3xl">
+        <p className="eyebrow text-muted">Servizio</p>
+        <h1 className="display-lg mt-2">Spedizioni e resi</h1>
+        <p className="section-subtitle mt-4">
+          Consegniamo in 24–48 ore nei giorni lavorativi e accettiamo resi
+          entro 30 giorni, senza chiedere spiegazioni.
+        </p>
+      </header>
 
       {/* Quick Info */}
-      <section className="bg-brand py-10">
+      <section className="border-y border-line py-8">
         <div className="container-app">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -69,12 +63,10 @@ export default function Shipping() {
               { icon: FiPackage, label: 'Imballaggio', sub: 'Protetto e sicuro' },
             ].map(item => (
               <div key={item.label} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <item.icon size={18} className="text-white" />
-                </div>
+                <item.icon size={18} className="text-muted shrink-0" />
                 <div>
-                  <p className="text-white font-heading font-semibold text-sm">{item.label}</p>
-                  <p className="text-white/60 text-xs">{item.sub}</p>
+                  <p className="text-ink font-heading font-semibold text-sm">{item.label}</p>
+                  <p className="text-muted text-xs mt-0.5">{item.sub}</p>
                 </div>
               </div>
             ))}
@@ -100,19 +92,18 @@ export default function Shipping() {
                 key={method.name}
                 variants={staggerItem}
                 className={`card p-6 ${i === 1 ? 'border-brand' : ''}`}
-                whileHover={{ y: -4 }}
               >
-                <span className="text-4xl mb-4 block">{method.icon}</span>
-                <h3 className="font-heading font-bold text-dark text-lg mb-1">{method.name}</h3>
-                <p className="text-text-secondary text-sm mb-4">{method.desc}</p>
-                <div className="border-t border-gray-100 pt-4 space-y-1.5">
+                <method.icon size={22} className="text-muted mb-4" />
+                <h3 className="font-heading font-bold text-ink text-lg mb-1">{method.name}</h3>
+                <p className="text-muted text-sm mb-4">{method.desc}</p>
+                <div className="border-t border-line pt-4 space-y-1.5">
                   <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Tempi</span>
-                    <span className="font-heading font-semibold text-dark">{method.days}</span>
+                    <span className="text-muted">Tempi</span>
+                    <span className="font-heading font-semibold text-ink">{method.days}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Costo</span>
-                    <span className="font-heading font-bold text-brand">{method.price}</span>
+                    <span className="text-muted">Costo</span>
+                    <span className="font-heading font-semibold text-ink tnum">{method.price}</span>
                   </div>
                   {method.free && (
                     <p className="text-xs text-green-600 bg-green-50 rounded-lg px-3 py-1.5 mt-2">{method.free}</p>
@@ -125,11 +116,11 @@ export default function Shipping() {
       </section>
 
       {/* Returns */}
-      <section className="section-wrapper bg-gray-50/50">
+      <section className="section-wrapper bg-sunken/50">
         <div className="container-app max-w-3xl">
           <div className="section-title text-center mb-10">
             <h2>Come Fare un Reso</h2>
-            <p className="text-text-secondary mt-2">30 giorni per ripensarci. Semplice e gratuito.</p>
+            <p className="text-muted mt-2">30 giorni per ripensarci. Semplice e gratuito.</p>
           </div>
           <div className="space-y-4">
             {RETURNS_STEPS.map((step, i) => (
@@ -141,18 +132,18 @@ export default function Shipping() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
               >
-                <span className="font-display font-bold text-4xl text-brand/20 leading-none flex-shrink-0">{step.num}</span>
+                <span className="font-mono text-xs text-muted leading-none shrink-0 pt-1 tnum">{step.num}</span>
                 <div>
-                  <h3 className="font-heading font-bold text-dark">{step.title}</h3>
-                  <p className="text-text-secondary text-sm mt-1">{step.desc}</p>
+                  <h3 className="font-heading font-bold text-ink">{step.title}</h3>
+                  <p className="text-muted text-sm mt-1">{step.desc}</p>
                 </div>
               </motion.div>
             ))}
           </div>
 
-          <div className="mt-8 p-5 rounded-2xl bg-brand/5 border border-brand/10">
-            <h4 className="font-heading font-bold text-dark mb-2">Prodotti Non Rimborsabili</h4>
-            <ul className="text-text-secondary text-sm space-y-1 list-disc list-inside">
+          <div className="mt-8 p-5 rounded-md bg-sunken border border-line">
+            <h4 className="font-heading font-bold text-ink mb-2">Prodotti Non Rimborsabili</h4>
+            <ul className="text-muted text-sm space-y-1 list-disc list-inside">
               <li>Prodotti personalizzati o su misura</li>
               <li>Prodotti igienici dopo apertura</li>
               <li>Software o licenze digitali attivate</li>

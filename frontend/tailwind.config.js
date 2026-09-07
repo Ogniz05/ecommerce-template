@@ -4,127 +4,108 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
-      // [CUSTOMIZE] Change these colors if needed - currently using brand palette (#D8125B + #2C2E39)
       colors: {
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
+
+        // Semantic neutrals, declared as real Tailwind colours so every utility
+        // family works on them (text-, bg-, border-, ring-, divide-, placeholder-).
+        ink: '#17171B',
+        body: '#3E3E46',
+        muted: '#6E6E7A',
+        faint: '#A0A0AC',
+        line: '#E5E5E9',
+        'line-strong': '#D2D2D9',
+        sunken: '#F6F6F7',
+
+        // [CUSTOMIZE] Brand accent. Kept as a single hue on purpose — the 400/600
+        // steps exist for hover and tint, not for building gradients out of.
         brand: {
-          50: '#fef0f5',
-          100: '#fde0eb',
-          200: '#fbb4cc',
-          300: '#f882a8',
-          400: '#f44f83',
+          50: '#FDF1F5',
+          100: '#FBE0EA',
+          200: '#F5B9CE',
+          300: '#EE8AAC',
+          400: '#E44C80',
           500: '#D8125B',
-          600: '#c00f52',
-          700: '#a00d44',
-          800: '#800a37',
-          900: '#600829',
+          600: '#B10E4A',
+          700: '#8E0B3B',
+          800: '#6B082C',
+          900: '#48051D',
           DEFAULT: '#D8125B',
         },
+
+        // Neutral ramp, warm-leaning. `dark` is a legacy name kept so pages
+        // outside the storefront keep rendering; the values are new.
         dark: {
-          50: '#8a8c96',
-          100: '#6a6c76',
-          200: '#555765',
-          300: '#434553',
-          400: '#363843',
-          500: '#2C2E39',
-          600: '#252731',
-          700: '#1e2028',
-          800: '#16181f',
-          900: '#0e1016',
-          DEFAULT: '#2C2E39',
-        }
+          50: '#A0A0AC',
+          100: '#8A8A96',
+          200: '#6E6E7A',
+          300: '#55555F',
+          400: '#3E3E46',
+          500: '#17171B',
+          600: '#141418',
+          700: '#111114',
+          800: '#0E0E11',
+          900: '#0A0A0C',
+          DEFAULT: '#17171B',
+        },
       },
+
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
-        heading: ['"Outfit"', '"DM Sans"', 'sans-serif'],
-        body: ['"DM Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        display: ['Fraunces', 'Georgia', 'Times New Roman', 'serif'],
+        heading: ['"Instrument Sans"', 'system-ui', 'sans-serif'],
+        body: ['"Instrument Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
+
+      // These names are still referenced by admin/auth/loader screens. They now
+      // resolve to flat fills so nothing renders a gradient anywhere.
       backgroundImage: {
-        'gradient-brand': 'linear-gradient(135deg, #D8125B 0%, #2C2E39 100%)',
-        'gradient-brand-hover': 'linear-gradient(135deg, #c00f52 0%, #1e2028 100%)',
-        'gradient-hero': 'linear-gradient(135deg, rgba(216,18,91,0.9) 0%, rgba(44,46,57,0.95) 100%)',
-        'gradient-card': 'linear-gradient(180deg, transparent 60%, rgba(44,46,57,0.9) 100%)',
-        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E\")",
+        'gradient-brand': 'linear-gradient(#D8125B, #D8125B)',
+        'gradient-brand-hover': 'linear-gradient(#B10E4A, #B10E4A)',
+        'gradient-hero': 'linear-gradient(#17171B, #17171B)',
+        'gradient-card': 'linear-gradient(180deg, transparent 55%, rgba(23,23,27,0.72) 100%)',
       },
+
       boxShadow: {
-        'brand': '0 4px 24px rgba(216, 18, 91, 0.35)',
-        'brand-lg': '0 8px 40px rgba(216, 18, 91, 0.4)',
-        'card': '0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)',
-        'card-hover': '0 12px 40px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.12)',
-        'glass': '0 8px 32px rgba(31, 38, 135, 0.15)',
-        'inner-light': 'inset 0 1px 0 rgba(255,255,255,0.1)',
+        1: '0 1px 2px rgba(23, 23, 27, 0.06)',
+        2: '0 4px 14px rgba(23, 23, 27, 0.08)',
+        3: '0 16px 40px rgba(23, 23, 27, 0.12)',
+        // legacy aliases, de-coloured
+        brand: '0 4px 14px rgba(23, 23, 27, 0.08)',
+        'brand-lg': '0 16px 40px rgba(23, 23, 27, 0.12)',
+        card: '0 1px 2px rgba(23, 23, 27, 0.06)',
+        'card-hover': '0 4px 14px rgba(23, 23, 27, 0.08)',
       },
-      animation: {
-        'shimmer': 'shimmer 2s linear infinite',
-        'float': 'float 3s ease-in-out infinite',
-        'glow': 'glow 2s ease-in-out infinite',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'fade-in': 'fadeIn 0.4s ease-out',
-        'scale-in': 'scaleIn 0.3s ease-out',
-        'pulse-brand': 'pulseBrand 2s ease-in-out infinite',
-        'gradient-shift': 'gradientShift 4s ease infinite',
-      },
-      keyframes: {
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
-        },
-        glow: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(216, 18, 91, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(216, 18, 91, 0.6)' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        scaleIn: {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        pulseBrand: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' },
-        },
-        gradientShift: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
-      },
-      spacing: {
-        '18': '4.5rem',
-        '22': '5.5rem',
-        '30': '7.5rem',
-        '34': '8.5rem',
-        '68': '17rem',
-        '72': '18rem',
-        '84': '21rem',
-        '96': '24rem',
-      },
+
       borderRadius: {
-        '4xl': '2rem',
-        '5xl': '2.5rem',
+        DEFAULT: '8px',
+        sm: '4px',
+        md: '8px',
+        lg: '8px',
+        xl: '8px',
+        '2xl': '8px',
+        '3xl': '12px',
+        '4xl': '12px',
+        '5xl': '12px',
       },
-      backdropBlur: {
-        xs: '2px',
+
+      transitionTimingFunction: {
+        smooth: 'cubic-bezier(0.32, 0.72, 0, 1)',
       },
+
+      transitionDuration: {
+        DEFAULT: '180ms',
+      },
+
       screens: {
-        'xs': '375px',
+        xs: '375px',
         '3xl': '1920px',
       },
-      transitionTimingFunction: {
-        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
-      }
+
+      maxWidth: {
+        prose: '68ch',
+      },
     },
   },
   plugins: [],
