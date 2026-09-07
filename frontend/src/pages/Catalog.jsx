@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { FiFilter, FiX, FiChevronDown, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
+import EmptyState from '../components/UI/EmptyState';
+import ErrorState from '../components/UI/ErrorState';
 import api from '../utils/api';
 
 // Defined at module level: an inline component would be recreated on every
@@ -95,6 +97,9 @@ export default function Catalog() {
   const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
+  // Swallowing the fetch error made a server outage render as "no products
+  // match your filters" — the customer reads an empty shop instead of a fault.
+  const [error, setError] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const category = searchParams.get('category') || '';
@@ -121,7 +126,11 @@ export default function Catalog() {
       const data = await api.get(`/products?${params}`);
       setProducts(data.products || []);
       setPagination(data.pagination || {});
-    } catch {}
+      setError(null);
+    } catch (err) {
+      setError(err);
+      setProducts([]);
+    }
     setLoading(false);
   }, [page, sort, category, search, featured, priceMin, priceMax, lang]);
 
@@ -221,9 +230,14 @@ export default function Catalog() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+              <div
+                role="status"
+                aria-live="polite"
+                aria-label={t('products.loading', 'Caricamento prodotti')}
+                className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10"
+              >
                 {[...Array(12)].map((_, i) => (
-                  <div key={i}>
+                  <div key={i} aria-hidden="true">
                     <div className="aspect-[4/5] skeleton rounded-md" />
                     <div className="pt-3 space-y-2">
                       <div className="h-2.5 skeleton rounded w-16" />
@@ -233,17 +247,22 @@ export default function Catalog() {
                   </div>
                 ))}
               </div>
+            ) : error ? (
+              <ErrorState
+                offline={error.offline}
+                description={error.offline
+                  ? 'Controlla la connessione: il catalogo torna appena sei online.'
+                  : 'Non siamo riusciti a caricare il catalogo. Riprova tra un istante.'}
+                onRetry={fetchProducts}
+              />
             ) : products.length === 0 ? (
-              <div className="py-24 text-center border border-line rounded-md">
-                <h3 className="font-heading font-semibold text-ink text-lg">{t('products.noProducts')}</h3>
-                <p className="text-muted text-sm mt-1.5">Prova a rimuovere qualche filtro.</p>
-                <button
-                  onClick={() => { setLocalSearch(''); setPriceMin(''); setPriceMax(''); setSearchParams({}); }}
-                  className="btn btn-outline btn-sm mt-5"
-                >
-                  Rimuovi tutti i filtri
-                </button>
-              </div>
+              <EmptyState
+                icon={FiSearch}
+                title={t('products.noProducts')}
+                description="Prova a rimuovere qualche filtro o a cercare altro."
+                action="Rimuovi tutti i filtri"
+                onAction={() => { setLocalSearch(''); setPriceMin(''); setPriceMax(''); setSearchParams({}); }}
+              />
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
                 {products.map(p => <ProductCard key={p.id} product={p} />)}

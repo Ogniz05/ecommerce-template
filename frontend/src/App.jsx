@@ -1,11 +1,13 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartSidebar from './components/Cart/CartSidebar';
 import PageLoader from './components/UI/PageLoader';
 import ScrollToTop from './components/UI/ScrollToTop';
+import ErrorBoundary from './components/UI/ErrorBoundary';
+import OfflineBanner from './components/UI/OfflineBanner';
 import { useAuthStore } from './store/useStore';
 
 // Lazy-loaded pages for code splitting
@@ -66,10 +68,23 @@ const AdminLayout = ({ children }) => (
   <div className="min-h-screen bg-gray-50">{children}</div>
 );
 
+/**
+ * Page-level crash containment.
+ *
+ * Keyed by pathname so navigating away clears a caught error: without the key
+ * the boundary stays in its failed state and every subsequent route renders
+ * the error screen, turning one broken page into a broken app.
+ */
+const RouteErrorBoundary = ({ children }) => {
+  const location = useLocation();
+  return <ErrorBoundary key={location.pathname} name={location.pathname}>{children}</ErrorBoundary>;
+};
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
+      <OfflineBanner />
       <Toaster
         position="bottom-center"
         toastOptions={{
@@ -90,6 +105,7 @@ export default function App() {
         }}
       />
 
+      <RouteErrorBoundary>
       <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Admin Routes */}
@@ -147,6 +163,7 @@ export default function App() {
             <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
           </Routes>
       </Suspense>
+      </RouteErrorBoundary>
     </>
   );
 }

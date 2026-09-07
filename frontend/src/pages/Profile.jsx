@@ -7,6 +7,7 @@ import {
   FiBell, FiLogOut, FiCheck, FiPlus, FiTrash2, FiAlertCircle, FiAward, FiArrowUp, FiArrowDown
 } from 'react-icons/fi';
 import { useAuthStore, useWishlistStore } from '../store/useStore';
+import EmptyState from '../components/UI/EmptyState';
 import { formatPrice } from '../utils/formatters';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -166,13 +167,15 @@ function OrdersTab() {
   if (loading) return <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />)}</div>;
 
   if (!orders.length) return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4"><FiPackage size={24} className="text-white/20" /></div>
-      <p className="text-white/40 mb-5 font-heading">Nessun ordine ancora</p>
-      <Link to="/catalogo" className="inline-flex items-center gap-2 bg-brand text-white font-heading font-semibold px-6 py-3 rounded-full text-sm hover:bg-brand-dark transition-colors">
-        Inizia a fare acquisti <FiChevronRight size={14} />
-      </Link>
-    </div>
+    <EmptyState
+      tone="dark"
+      bare
+      icon={FiPackage}
+      title="Nessun ordine ancora"
+      description="Quando acquisti qualcosa, lo ritrovi qui con tracking e fattura."
+      action="Inizia a fare acquisti"
+      actionTo="/catalogo"
+    />
   );
 
   return (
@@ -236,13 +239,15 @@ function WishlistTab() {
   if (loading) return <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="aspect-[3/4] rounded-xl bg-white/5 animate-pulse" />)}</div>;
 
   if (!products.length) return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4"><FiHeart size={24} className="text-white/20" /></div>
-      <p className="text-white/40 mb-5 font-heading">Nessun prodotto nella wishlist</p>
-      <Link to="/catalogo" className="inline-flex items-center gap-2 bg-brand text-white font-heading font-semibold px-6 py-3 rounded-full text-sm hover:bg-brand-dark transition-colors">
-        Scopri i prodotti <FiChevronRight size={14} />
-      </Link>
-    </div>
+    <EmptyState
+      tone="dark"
+      bare
+      icon={FiHeart}
+      title="Nessun prodotto nella wishlist"
+      description="Tocca il cuore su un prodotto per tenerlo d'occhio."
+      action="Scopri i prodotti"
+      actionTo="/catalogo"
+    />
   );
 
   return (
@@ -397,10 +402,14 @@ function AddressesTab() {
         </button>
       </div>
       {!addresses.length ? (
-        <div className="text-center py-14">
-          <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3"><FiMapPin size={20} className="text-white/20" /></div>
-          <p className="text-white/40 text-sm font-heading">Nessun indirizzo salvato</p>
-        </div>
+        <EmptyState
+          tone="dark"
+          bare
+          compact
+          icon={FiMapPin}
+          title="Nessun indirizzo salvato"
+          description="Salva un indirizzo per non riscriverlo a ogni ordine."
+        />
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {addresses.map((addr, i) => (
