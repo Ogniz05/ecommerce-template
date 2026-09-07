@@ -775,8 +775,13 @@ function NotificationsTab() {
               <p className="text-white/35 text-xs mt-0.5">{item.desc}</p>
             </div>
             <button
-              onClick={() => toggle(item.id)}
-              className={`relative w-11 h-6 rounded-full transition-all duration-250 flex-shrink-0 ${prefs[item.id] ? 'bg-brand' : 'bg-white/10'}`}
+              onClick={() => !item.locked && toggle(item.id)}
+              disabled={item.locked || saving === item.id}
+              role="switch"
+              aria-checked={!!prefs[item.id]}
+              aria-label={item.label}
+              title={item.locked ? 'Necessaria: riguarda i tuoi ordini' : undefined}
+              className={`relative w-11 h-6 rounded-full transition-all duration-250 flex-shrink-0 ${prefs[item.id] ? 'bg-brand' : 'bg-white/10'} ${item.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <motion.div
                 animate={{ x: prefs[item.id] ? 20 : 2 }}

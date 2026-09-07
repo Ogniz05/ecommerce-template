@@ -7,6 +7,7 @@ import { useCartStore, useWishlistStore, useAuthStore } from '../store/useStore'
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import api from '../utils/api';
+import { trackViewItem } from '../utils/analytics';
 import { formatPrice, formatDate, generateStars } from '../utils/formatters';
 import { fadeInUp, staggerContainer, staggerItem } from '../utils/animations';
 import toast from 'react-hot-toast';
@@ -112,6 +113,9 @@ export default function ProductDetail() {
     return api.get(`/products/${slug}?lang=${lang}`)
       .then(d => {
         setData(d);
+        // Only on a fresh product, not on the refetches that follow a review
+        // or a stock-alert signup — those would inflate the view count.
+        if (reset && d?.product) trackViewItem(d.product);
         if (reset) { setSelectedVariant(null); setSelectedImage(0); setQty(1); }
       })
       .catch(() => toast.error('Prodotto non trovato'))

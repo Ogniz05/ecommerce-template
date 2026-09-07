@@ -8,6 +8,7 @@ const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
 const { sendEmail, emailTemplates } = require('../config/email');
+const { canSend } = require('../services/notificationPrefs');
 
 // authenticate + read-level access (admin OR moderator) for the whole router.
 // Individual write routes and admin-only panels add isAdminOnly on top.
@@ -282,10 +283,12 @@ router.patch('/products/:id', async (req, res, next) => {
         );
         if (product) {
           const alerts = await sequelize.query(
-            'SELECT email FROM stock_alerts WHERE product_id = ? AND variant_id IS NULL AND notified_at IS NULL',
+            'SELECT email, user_id FROM stock_alerts WHERE product_id = ? AND variant_id IS NULL AND notified_at IS NULL',
             { replacements: [id], type: QueryTypes.SELECT }
           );
           for (const alert of alerts) {
+            // Restock mail is opt-out, and the switch lives on the account.
+            if (!(await canSend(alert.user_id, 'restock'))) continue;
             sendEmail({ to: alert.email, ...emailTemplates.stockAlert(product, alert.email) });
           }
           if (alerts.length > 0) {
@@ -573,12 +576,13 @@ router.patch('/inventory/:id', async (req, res, next) => {
       );
       if (product) {
         const alerts = await sequelize.query(
-          `SELECT email FROM stock_alerts
+          `SELECT email, user_id FROM stock_alerts
            WHERE product_id = ? AND notified_at IS NULL
            AND (variant_id = ? OR variant_id IS NULL)`,
           { replacements: [current.product_id, current.variant_id || null], type: QueryTypes.SELECT }
         );
         for (const alert of alerts) {
+          if (!(await canSend(alert.user_id, 'restock'))) continue;
           sendEmail({ to: alert.email, ...emailTemplates.stockAlert(product, alert.email) });
         }
         if (alerts.length > 0) {
@@ -902,8 +906,19 @@ router.post('/newsletter/campaign', isAdminOnly, async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Oggetto e contenuto obbligatori' });
     }
 
+    // A subscriber who also has an account and unticked "newsletter" there has
+    // opted out; the two lists have to agree or the profile switch does nothing.
     const subscribers = await sequelize.query(
-      'SELECT email FROM newsletter_subscribers WHERE is_active = 1',
+      // Both COALESCE branches must stay JSON. `COALESCE(json_value, TRUE)`
+      // coerces to a common type and the result then compares equal to FALSE,
+      // which silently excluded everyone — including subscribers who had opted
+      // in. Comparing JSON to JSON keeps the three cases distinct: opted in,
+      // opted out, and no preference recorded (treated as in).
+      `SELECT ns.email FROM newsletter_subscribers ns
+         LEFT JOIN users u ON u.email = ns.email
+        WHERE ns.is_active = 1
+          AND COALESCE(JSON_EXTRACT(u.notification_prefs, '$.newsletter'), CAST('true' AS JSON))
+              <> CAST('false' AS JSON)`,
       { type: QueryTypes.SELECT }
     );
     if (subscribers.length === 0) {

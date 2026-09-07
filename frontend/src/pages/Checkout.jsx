@@ -8,6 +8,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { useCartStore, useAuthStore, selectSubtotal } from '../store/useStore';
 import { formatPrice } from '../utils/formatters';
 import api from '../utils/api';
+import { trackBeginCheckout, trackPurchase } from '../utils/analytics';
 import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder');
@@ -361,6 +362,9 @@ export default function Checkout() {
       setOrderId(data.orderId);
       setPaymentToken(data.paymentToken);
       setOrderNumber(data.orderNumber);
+      // Fired once the order exists and the customer reaches payment, which is
+      // the step whose drop-off actually matters.
+      trackBeginCheckout(items, data.totalAmount);
       setStep(2);
     } catch (err) {
       toast.error(err.message || 'Errore creazione ordine');
@@ -368,6 +372,9 @@ export default function Checkout() {
   };
 
   const handlePaymentSuccess = () => {
+    // Reported before the cart is emptied, since the line items are the
+    // purchase payload and clearCart() would leave nothing to send.
+    trackPurchase({ orderNumber, value: total, items });
     clearCart();
     setStep(3);
   };

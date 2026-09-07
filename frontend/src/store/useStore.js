@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../utils/api';
+import { trackAddToCart, trackRemoveFromCart } from '../utils/analytics';
 
 // ─── CART STORE ───────────────────────────────────────────────────────────────
 export const useCartStore = create(
@@ -36,10 +37,16 @@ export const useCartStore = create(
         }
 
         set({ isOpen: true });
+        // Tracked here rather than at each call site: the catalogue, the
+        // product page and the quick-add all funnel through this action, so
+        // one hook covers them and none can be forgotten.
+        trackAddToCart(product, quantity);
       },
 
       removeItem: (itemId) => {
+        const removed = get().items.find(i => i.id === itemId);
         set({ items: get().items.filter(i => i.id !== itemId) });
+        if (removed) trackRemoveFromCart({ id: removed.product_id, name: removed.product_name, price: removed.price }, removed.quantity);
       },
 
       updateQuantity: (itemId, quantity) => {

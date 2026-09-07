@@ -6,12 +6,15 @@ import { MotionConfig } from 'framer-motion';
 import App from './App';
 import ErrorBoundary from './components/UI/ErrorBoundary';
 import { initMonitoring } from './utils/monitoring';
+import { initAnalytics } from './utils/analytics';
 import './index.css';
 import './i18n/i18n';
 
 // Before render, so a crash during the first paint is still reported.
 // No-ops unless VITE_SENTRY_DSN is configured.
 initMonitoring();
+// Loads no provider and sends nothing until the visitor opts in.
+initAnalytics();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

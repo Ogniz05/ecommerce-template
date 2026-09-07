@@ -8,6 +8,9 @@ const { authenticate } = require('../middleware/auth');
 const {
   deleteAccount, exportAccountData, summarizeAccount, isLastAdmin
 } = require('../services/accountDeletion');
+const {
+  getPreferences, setPreferences, CATEGORIES: NOTIFICATION_CATEGORIES
+} = require('../services/notificationPrefs');
 
 router.use(authenticate);
 
@@ -179,6 +182,25 @@ router.get('/wishlist', async (req, res, next) => {
       { replacements: [req.user.id], type: QueryTypes.SELECT }
     );
     res.json({ success: true, wishlist });
+  } catch (error) { next(error); }
+});
+
+// GET /api/users/notification-preferences
+router.get('/notification-preferences', async (req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      preferences: await getPreferences(req.user.id),
+      categories: NOTIFICATION_CATEGORIES
+    });
+  } catch (error) { next(error); }
+});
+
+// PUT /api/users/notification-preferences
+router.put('/notification-preferences', async (req, res, next) => {
+  try {
+    const preferences = await setPreferences(req.user.id, req.body.preferences || {});
+    res.json({ success: true, preferences });
   } catch (error) { next(error); }
 });
 
