@@ -8,6 +8,7 @@ import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import { staggerContainer, staggerItem } from '../../utils/animations';
 import Checkbox from '../../components/UI/Checkbox';
+import { resetOnboarding } from '../../components/UI/Onboarding';
 
 // Module-level component: defining it inside Register would recreate it on
 // every keystroke, remounting the input and dropping focus.
@@ -76,6 +77,9 @@ export default function Register() {
       const data = await api.post('/auth/register', form);
       login(data.user, data.token);
       toast.success(t('auth.registerSuccess'));
+      // Registration used to drop people back on a home page identical to the
+      // logged-out one, so nothing ever told them what an account is for.
+      resetOnboarding();
       navigate('/');
     } catch (err) {
       toast.error(err.message || 'Errore registrazione');

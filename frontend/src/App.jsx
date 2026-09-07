@@ -10,6 +10,8 @@ import ErrorBoundary from './components/UI/ErrorBoundary';
 import OfflineBanner from './components/UI/OfflineBanner';
 import CookieConsent from './components/UI/CookieConsent';
 import VerificationBanner from './components/UI/VerificationBanner';
+import Onboarding, { shouldShowOnboarding } from './components/UI/Onboarding';
+import BetaFeedback from './components/UI/BetaFeedback';
 import { useAuthStore } from './store/useStore';
 
 // Lazy-loaded pages for code splitting
@@ -91,12 +93,30 @@ const RouteErrorBoundary = ({ children }) => {
   return <ErrorBoundary key={location.pathname} name={location.pathname}>{children}</ErrorBoundary>;
 };
 
+/**
+ * Runs once for a freshly registered account. Gated on being signed in so it
+ * never greets a visitor who has no account to explain.
+ */
+function OnboardingGate() {
+  const { isAuthenticated } = useAuthStore();
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isAuthenticated && shouldShowOnboarding()) setOpen(true);
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return null;
+  return <Onboarding open={open} onClose={() => setOpen(false)} />;
+}
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
       <OfflineBanner />
       <CookieConsent />
+      <OnboardingGate />
+      <BetaFeedback />
       <Toaster
         position="bottom-center"
         toastOptions={{

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { gateEnabled, isValidCookieValue } = require('../services/betaAccess');
 
 function parseCookies(header) {
   const out = {};
@@ -118,21 +119,22 @@ const GATE_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-module.exports = function accessGate(req, res, next) {
-  const expected = process.env.ACCESS_TOKEN;
-  if (!expected) return next();
+module.exports = async function accessGate(req, res, next) {
+  if (!gateEnabled()) return next();
 
   const cookies = parseCookies(req.headers.cookie);
   const token = cookies.visa_token || '';
 
+  // Accepts the shared ACCESS_TOKEN or an individual tester invite, so a
+  // revoked tester loses access on their next request without disturbing
+  // anyone else.
   let valid = false;
-  if (token.length > 0 && token.length === expected.length) {
-    try {
-      valid = crypto.timingSafeEqual(
-        Buffer.from(token, 'utf8'),
-        Buffer.from(expected, 'utf8')
-      );
-    } catch (_) {}
+  try {
+    valid = await isValidCookieValue(token);
+  } catch (err) {
+    // A database problem must not turn into an open door.
+    console.error('Access gate lookup failed:', err.message);
+    valid = false;
   }
 
   if (valid) return next();
